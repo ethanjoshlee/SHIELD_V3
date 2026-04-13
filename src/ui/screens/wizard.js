@@ -163,7 +163,17 @@ export function renderWizard(container, transitionFn) {
   function getCountriesList(side) {
     const countries = COUNTRIES[side];
     const selected = side === 'blue' ? selectedBlue : selectedRed;
-    const items = Object.entries(countries).map(([key, cdata]) => {
+    const sortedCountries = Object.entries(countries).sort(([, a], [, b]) =>
+      (a.label ?? '').localeCompare(b.label ?? '')
+    );
+    if (side === 'blue') {
+      sortedCountries.sort(([keyA], [keyB]) => {
+        if (keyA === 'US' && keyB !== 'US') return -1;
+        if (keyB === 'US' && keyA !== 'US') return 1;
+        return 0;
+      });
+    }
+    const items = sortedCountries.map(([key, cdata]) => {
       const isSelected = key === selected;
       const selectedClass = isSelected ? `selected ${side}` : '';
       return `<div class="wizard-country-item ${selectedClass}" data-side="${side}" data-key="${key}">${cdata.label}</div>`;
@@ -378,7 +388,7 @@ export function renderWizard(container, transitionFn) {
         </div>
       </div>
       <div class="project-identity project-identity-right" aria-label="Project identity">
-        <div class="project-identity-title">Strategic Homeland Intercept Evaluation and Layered Defense Model</div>
+        <div class="project-identity-title">Strategic Homeland Interception Evaluation and Layered Defense Model</div>
         <div class="project-identity-attribution">Defense, Emerging Technology, and Strategy Program<br>Belfer Center for Science and International Affairs</div>
       </div>
     </div>

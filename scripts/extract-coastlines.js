@@ -1,5 +1,12 @@
 // Usage: node scripts/extract-coastlines.js
-// Fetches Natural Earth 110m land polygons from GitHub and writes src/ui/globe/worldPolygons.js
+// Fetches Natural Earth 110m land polygons from GitHub and writes
+// src/ui/globe/worldPolygons.js.
+//
+// We keep:
+// - exterior rings for subtle land fills
+// - interior rings (holes) for inland seas embedded in the land dataset, such
+//   as the Caspian Sea
+// - a flattened combined list for coastline stroke rendering
 
 const https = require('https');
 const fs = require('fs');
@@ -24,19 +31,31 @@ async function main() {
   const geojson = await fetchJSON(URL);
 
   const rings = [];
+  const landRings = [];
+  const interiorWaterRings = [];
   for (const feature of geojson.features) {
     const geom = feature.geometry;
     if (geom.type === 'Polygon') {
-      rings.push(geom.coordinates[0]);
+      rings.push(...geom.coordinates);
+      landRings.push(geom.coordinates[0]);
+      interiorWaterRings.push(...geom.coordinates.slice(1));
     } else if (geom.type === 'MultiPolygon') {
       for (const part of geom.coordinates) {
-        rings.push(part[0]);
+        rings.push(...part);
+        landRings.push(part[0]);
+        interiorWaterRings.push(...part.slice(1));
       }
     }
   }
 
   const valid = rings.filter(r => r.length >= 4);
-  console.log(`Extracted ${valid.length} polygon rings.`);
+  const validLand = landRings.filter(r => r.length >= 4);
+  const validInteriorWater = interiorWaterRings.filter(r => r.length >= 4);
+  console.log(
+    `Extracted ${validLand.length} land ring(s), ` +
+    `${validInteriorWater.length} interior-water ring(s), ` +
+    `${valid.length} total coastline ring(s).`
+  );
 
   const js = `/**
  * World coastlines — Natural Earth 110m land polygons.
@@ -45,6 +64,8 @@ async function main() {
  * Regenerate: node scripts/extract-coastlines.js
  */
 
+export const WORLD_LAND_RINGS = ${JSON.stringify(validLand, null, 0)};
+export const WORLD_INTERIOR_WATER_RINGS = ${JSON.stringify(validInteriorWater, null, 0)};
 export const WORLD_COASTLINES = ${JSON.stringify(valid, null, 0)};
 `;
 

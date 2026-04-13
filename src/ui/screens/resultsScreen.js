@@ -135,7 +135,7 @@ export function renderResultsScreen(container, data, transitionFn) {
     </div>
     <div class="results-right">
       <div class="project-identity project-identity-right" aria-label="Project identity">
-        <div class="project-identity-title">Strategic Homeland Intercept Evaluation and Layered Defense Model</div>
+        <div class="project-identity-title">Strategic Homeland Interception Evaluation and Layered Defense Model</div>
         <div class="project-identity-attribution">Defense, Emerging Technology, and Strategy Program<br>Belfer Center for Science and International Affairs</div>
       </div>
     </div>

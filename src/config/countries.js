@@ -74,6 +74,10 @@ export const COUNTRIES = {
       pkSpaceBoostDirected: 0.40,
       constellationAltitudeKm: 1000,
     },
+
+    Europe: {
+      label: "Europe",
+    },
   },
 
   red: {
@@ -108,6 +112,10 @@ export const COUNTRIES = {
       midcourseInterceptionPenalty: 0,
       terminalInterceptionPenalty: 0,
       regionalCoverageFactor: 0.9,
+    },
+
+    Iran: {
+      label: "Iran",
     },
 
     China: {

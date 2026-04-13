@@ -5,16 +5,22 @@
 
 import * as THREE from 'three';
 import { COUNTRY_POLYGONS } from './geoData.js';
-import { WORLD_COASTLINES } from './worldPolygons.js';
+import { WORLD_COASTLINES, WORLD_INTERIOR_WATER_RINGS, WORLD_LAND_RINGS } from './worldPolygons.js';
 import { WORLD_COUNTRY_BORDERS } from './worldCountryBorders.js';
+import { WORLD_INLAND_WATER } from './worldInlandWater.js';
 
 const TEX_W = 2048;
 const TEX_H = 1024;
 const GLOBE_RADIUS = 180;
+const BASE_FILL = '#0a0a0f';
+const LAND_FILL = 'rgba(0, 0, 0, 0.14)';
 const BORDER_STROKE = 'rgba(255, 170, 0, 0.20)';
 const BORDER_LINE_WIDTH = 0.85;
 const COAST_STROKE = 'rgba(255, 170, 0, 0.45)';
 const COAST_LINE_WIDTH = 1.7;
+const INLAND_WATER_FILL = BASE_FILL;
+const INLAND_WATER_STROKE = 'rgba(255, 170, 0, 0.20)';
+const INLAND_WATER_LINE_WIDTH = 0.9;
 
 let canvas, ctx, texture, sphereMesh;
 let highlightedCountries = new Set();
@@ -79,7 +85,7 @@ function drawPath(points, opts = {}) {
  */
 function renderTexture() {
   // Clear to dark
-  ctx.fillStyle = '#0a0a0f';
+  ctx.fillStyle = BASE_FILL;
   ctx.fillRect(0, 0, TEX_W, TEX_H);
 
   // Dot grid
@@ -90,7 +96,15 @@ function renderTexture() {
     }
   }
 
-  // Layer 1: country borders (subtle)
+  // Layer 1: landmass fill — gives water/ground a subtle separation while
+  // staying inside the same dark palette.
+  for (const ring of WORLD_LAND_RINGS) {
+    drawPolygon(ring, {
+      fill: LAND_FILL,
+    });
+  }
+
+  // Layer 2: country borders (subtle)
   for (const borderLine of WORLD_COUNTRY_BORDERS) {
     drawPath(borderLine, {
       stroke: BORDER_STROKE,
@@ -98,7 +112,7 @@ function renderTexture() {
     });
   }
 
-  // Layer 2: coastlines (primary)
+  // Layer 3: coastlines (primary)
   for (const ring of WORLD_COASTLINES) {
     drawPolygon(ring, {
       stroke: COAST_STROKE,
@@ -106,7 +120,7 @@ function renderTexture() {
     });
   }
 
-  // Layer 3: selected-country overlays (topmost)
+  // Layer 4: selected-country overlays
   for (const [key, data] of Object.entries(COUNTRY_POLYGONS)) {
     const isHighlighted = highlightedCountries.has(key);
     if (!isHighlighted) continue;
@@ -119,6 +133,17 @@ function renderTexture() {
         lineWidth: 2.2,
       });
     }
+  }
+
+  // Layer 5: inland water cutouts. Drawn after country fills so the water
+  // remains legible even when a country is highlighted.
+  const waterRings = [...WORLD_INTERIOR_WATER_RINGS, ...WORLD_INLAND_WATER];
+  for (const ring of waterRings) {
+    drawPolygon(ring, {
+      fill: INLAND_WATER_FILL,
+      stroke: INLAND_WATER_STROKE,
+      lineWidth: INLAND_WATER_LINE_WIDTH,
+    });
   }
 
   // Graticule lines (faint)

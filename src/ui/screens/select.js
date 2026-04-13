@@ -120,7 +120,7 @@ export function renderSelect(container) {
   el.innerHTML = `
     <div class="dot-grid"></div>
     <div class="select-header">
-      <h1>Strategic Homeland Intercept Evaluation<br>
+      <h1>Strategic Homeland Interception Evaluation<br>
       and Layered Defense Model</h1>
       <div class="tagline">Select parameters</div>
     </div>
