@@ -1,0 +1,63 @@
+/**
+ * Global app state and default parameter values.
+ */
+
+export const DEFAULTS = {
+  // --- Core scalar params ---
+  nMissiles: 80,
+  mirvsPerMissile: 5,
+  kilotonsPerWarhead: 400,
+  decoysPerWarhead: 2,
+  decoysPerMissile: 15,
+  pDetectTrack: 0.80,
+  pClassifyWarhead: 0.80,
+  pFalseAlarmDecoy: 0.20,
+  doctrineMode: "barrage",
+  shotsPerTarget: 2,
+  maxShotsPerTarget: 4,
+  pReengage: 0.95,
+  midcourseKineticDoctrineMode: "barrage",
+  midcourseKineticShotsPerTarget: 2,
+  midcourseKineticMaxShotsPerTarget: 4,
+  midcourseKineticPReengage: 0.95,
+  boostKineticDoctrineMode: "barrage",
+  boostKineticShotsPerTarget: 2,
+  boostKineticMaxShotsPerTarget: 4,
+  boostKineticPReengage: 0.95,
+  pkWarhead: 0.60,
+  pkDecoy: 0.50,
+  nInventory: 44,
+  nSpaceBoostKinetic: 0,
+  pkSpaceBoostKinetic: 0.50,
+  nSpaceBoostDirected: 0,
+  pkSpaceBoostDirected: 0.40,
+  nMidcourseSpaceKinetic: 0,
+  pkMidcourseSpaceKinetic: 0.50,
+  nMidcourseSpaceLaser: 0,
+  pkMidcourseSpaceLaser: 0.40,
+  nTerminalKinetic: 0,
+  pkTerminalKinetic: 0.30,
+  nTerminalNuclear: 0,
+  pkTerminalNuclear: 0.60,
+  terminalShotsPerTarget: 2,
+  boostDirectedTargetsPerPlatform: 2,
+  midcourseDirectedTargetsPerPlatform: 3,
+  midcourseSpaceAvailabilityMultiplier: 0.30,
+  launchRegion: "default",
+  asatSensingPenalty: 0,
+  asatAvailabilityPenalty: 0,
+  asatPkPenalty: 0,
+  boostEvasionPenalty: 0.0,
+  midcourseInterceptionPenalty: 0,
+  terminalInterceptionPenalty: 0,
+  nTrials: 2000,
+  seed: null,
+
+  // --- Multi-phase params (populated by presets or future UI) ---
+  // constellationAltitudeKm: 1000,
+  // regionalCoverageFactor: 1.0,
+  // pDecoyBurnup: 0.7,
+  // interceptors: { ... },    // per-type: { deployed, pk, costPerUnit_M, phase }
+  // missileClasses: { ... },  // per-class: { count, mirvsPerMissile, decoysPerWarhead, yieldKt, boostEvasion }
+  // countermeasures: { asatType },
+};
