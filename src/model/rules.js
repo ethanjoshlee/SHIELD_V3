@@ -15,9 +15,7 @@ export function applyBoostEvasion(pk, boostEvasion) {
  * Returns true if an interceptor type is space-based (affected by ASAT).
  */
 export function isSpaceBased(interceptorType) {
-  return interceptorType.startsWith("boost_") ||
-         interceptorType === "midcourse_kinetic" ||
-         interceptorType === "midcourse_laser";
+  return interceptorType.startsWith("boost_");
 }
 
 /**

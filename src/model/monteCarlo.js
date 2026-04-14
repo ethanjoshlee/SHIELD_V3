@@ -35,10 +35,7 @@ export function runMonteCarlo(params) {
   const boostMissilesKilled = [];
   const boostWarheadsDestroyed = [];
   const midcourseWarheadsKilled = [];
-  const terminalWarheadsKilled = [];
   const deliveredKilotons = [];
-  let deployedMidcourseSpaceInterceptors = null;
-  let effectiveMidcourseSpaceInterceptorsAvailable = null;
 
   let realWarheadsConst = null;
   for (let t = 0; t < nTrials; t++) {
@@ -64,14 +61,7 @@ export function runMonteCarlo(params) {
     boostMissilesKilled.push(r.boostMissilesKilled);
     boostWarheadsDestroyed.push(r.boostWarheadsDestroyed);
     midcourseWarheadsKilled.push(r.midcourseWarheadsKilled);
-    terminalWarheadsKilled.push(r.terminalWarheadsKilled);
     deliveredKilotons.push(r.deliveredKilotons ?? r.ktDelivered ?? 0);
-    if (deployedMidcourseSpaceInterceptors === null) {
-      deployedMidcourseSpaceInterceptors = r.deployedMidcourseSpaceInterceptors ?? 0;
-    }
-    if (effectiveMidcourseSpaceInterceptorsAvailable === null) {
-      effectiveMidcourseSpaceInterceptorsAvailable = r.effectiveMidcourseSpaceInterceptorsAvailable ?? 0;
-    }
   }
 
   const summary = computeSummary(
@@ -82,7 +72,7 @@ export function runMonteCarlo(params) {
       shotsTot, shotsW, shotsD,
       invLeft,
       boostMissilesKilled, boostWarheadsDestroyed,
-      midcourseWarheadsKilled, terminalWarheadsKilled,
+      midcourseWarheadsKilled,
       deliveredKilotons,
     },
     realWarheadsConst,
@@ -95,8 +85,6 @@ export function runMonteCarlo(params) {
     shotsTot,
     fp,
     deliveredKilotons,
-    deployedMidcourseSpaceInterceptors,
-    effectiveMidcourseSpaceInterceptorsAvailable,
     summary,
   };
 }

@@ -37,20 +37,12 @@ export function buildBoostScenario(params) {
       params.nSpaceBoostKinetic,
       params.interceptors?.boost_kinetic?.deployed ?? 0
     ),
-    boost_laser: asFiniteNonNegative(
-      params.nSpaceBoostDirected,
-      params.interceptors?.boost_laser?.deployed ?? 0
-    ),
   };
 
   const pkByType = {
     boost_kinetic: asProbability(
       params.pkSpaceBoostKinetic,
       params.interceptors?.boost_kinetic?.pk ?? 0
-    ),
-    boost_laser: asProbability(
-      params.pkSpaceBoostDirected,
-      params.interceptors?.boost_laser?.pk ?? 0
     ),
   };
 
@@ -62,20 +54,15 @@ export function buildBoostScenario(params) {
 
   const coverageByType = {
     boost_kinetic: asProbability(preset.coverage.spaceBoostKinetic, 1.0),
-    boost_laser: asProbability(preset.coverage.spaceBoostDirected, 1.0),
   };
 
   const effectiveBoostInterceptorsInRangeByType = {
     boost_kinetic: deployedByType.boost_kinetic * coverageByType.boost_kinetic,
-    boost_laser: deployedByType.boost_laser * coverageByType.boost_laser,
   };
 
   const effectiveBoostInterceptorsPostAsatByType = {
     boost_kinetic:
       effectiveBoostInterceptorsInRangeByType.boost_kinetic *
-      availabilityMultiplier,
-    boost_laser:
-      effectiveBoostInterceptorsInRangeByType.boost_laser *
       availabilityMultiplier,
   };
 

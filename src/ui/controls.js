@@ -65,7 +65,6 @@ export function readParamsFromUI(blueKey, redKey, root = document) {
   const doctrineMode = getValue("doctrineMode", "doctrineMode", "barrage");
   const shotsPerTarget = Math.max(0, parseInt(getValue("shotsPerTarget", "shotsPerTarget", 0), 10) || 0);
   const maxShotsPerTarget = Math.max(0, parseInt(getValue("maxShotsPerTarget", "maxShotsPerTarget", 0), 10) || 0);
-  const pReengage = clamp01(parseFloat(getValue("pReengage", "pReengage", 0.85)) || 0);
 
   // Family-specific doctrine params take precedence when present.
   const midcourseKineticDoctrineMode = getValue(
@@ -87,34 +86,12 @@ export function readParamsFromUI(blueKey, redKey, root = document) {
       10
     ) || 0
   );
-  const midcourseKineticPReengage = clamp01(
-    parseFloat(
-      getValue("midcourseKineticPReengage", "midcourseKineticPReengage", pReengage)
-    ) || 0
-  );
 
-  const boostKineticDoctrineMode = getValue(
-    "boostKineticDoctrineMode",
-    "boostKineticDoctrineMode",
-    doctrineMode
-  );
   const boostKineticShotsPerTarget = Math.max(
     0,
     parseInt(
       getValue("boostKineticShotsPerTarget", "boostKineticShotsPerTarget", shotsPerTarget),
       10
-    ) || 0
-  );
-  const boostKineticMaxShotsPerTarget = Math.max(
-    0,
-    parseInt(
-      getValue("boostKineticMaxShotsPerTarget", "boostKineticMaxShotsPerTarget", maxShotsPerTarget),
-      10
-    ) || 0
-  );
-  const boostKineticPReengage = clamp01(
-    parseFloat(
-      getValue("boostKineticPReengage", "boostKineticPReengage", pReengage)
     ) || 0
   );
 
@@ -144,157 +121,6 @@ export function readParamsFromUI(blueKey, redKey, root = document) {
       )
     ) || 0
   );
-  const nSpaceBoostDirected = Math.max(
-    0,
-    parseInt(
-      getValue(
-        "nSpaceBoostDirected",
-        "nSpaceBoostDirected",
-        bluePreset?.nSpaceBoostDirected ?? bluePreset?.interceptors?.boost_laser?.deployed ?? 0
-      ),
-      10
-    ) || 0
-  );
-  const pkSpaceBoostDirected = clamp01(
-    parseFloat(
-      getValue(
-        "pkSpaceBoostDirected",
-        "pkSpaceBoostDirected",
-        bluePreset?.pkSpaceBoostDirected ?? bluePreset?.interceptors?.boost_laser?.pk ?? 0.4
-      )
-    ) || 0
-  );
-  const nMidcourseSpaceKinetic = Math.max(
-    0,
-    parseInt(
-      getValue(
-        "nMidcourseSpaceKinetic",
-        "nMidcourseSpaceKinetic",
-        bluePreset?.interceptors?.midcourse_kinetic?.deployed ?? 0
-      ),
-      10
-    ) || 0
-  );
-  const pkMidcourseSpaceKinetic = clamp01(
-    parseFloat(
-      getValue(
-        "pkMidcourseSpaceKinetic",
-        "pkMidcourseSpaceKinetic",
-        bluePreset?.interceptors?.midcourse_kinetic?.pk ?? 0.5
-      )
-    ) || 0
-  );
-  const nMidcourseSpaceLaser = Math.max(
-    0,
-    parseInt(
-      getValue(
-        "nMidcourseSpaceLaser",
-        "nMidcourseSpaceLaser",
-        bluePreset?.interceptors?.midcourse_laser?.deployed ?? 0
-      ),
-      10
-    ) || 0
-  );
-  const pkMidcourseSpaceLaser = clamp01(
-    parseFloat(
-      getValue(
-        "pkMidcourseSpaceLaser",
-        "pkMidcourseSpaceLaser",
-        bluePreset?.interceptors?.midcourse_laser?.pk ?? 0.4
-      )
-    ) || 0
-  );
-  const nTerminalKinetic = Math.max(
-    0,
-    parseInt(
-      getValue(
-        "nTerminalKinetic",
-        "nTerminalKinetic",
-        bluePreset?.interceptors?.terminal_kinetic?.deployed ?? 0
-      ),
-      10
-    ) || 0
-  );
-  const pkTerminalKinetic = clamp01(
-    parseFloat(
-      getValue(
-        "pkTerminalKinetic",
-        "pkTerminalKinetic",
-        bluePreset?.interceptors?.terminal_kinetic?.pk ?? 0.8
-      )
-    ) || 0
-  );
-  const nTerminalNuclear = Math.max(
-    0,
-    parseInt(
-      getValue(
-        "nTerminalNuclear",
-        "nTerminalNuclear",
-        bluePreset?.interceptors?.terminal_nuclear?.deployed ?? 0
-      ),
-      10
-    ) || 0
-  );
-  const pkTerminalNuclear = clamp01(
-    parseFloat(
-      getValue(
-        "pkTerminalNuclear",
-        "pkTerminalNuclear",
-        bluePreset?.interceptors?.terminal_nuclear?.pk ?? 0.95
-      )
-    ) || 0
-  );
-  const terminalShotsPerTarget = Math.min(
-    4,
-    Math.max(
-      1,
-      parseInt(
-        getValue("terminalShotsPerTarget", "terminalShotsPerTarget", 2),
-        10
-      ) || 2
-    )
-  );
-  const boostDirectedTargetsPerPlatform = Math.min(
-    9,
-    Math.max(
-      1,
-      parseInt(
-        getValue(
-          "boostDirectedTargetsPerPlatform",
-          "boostDirectedTargetsPerPlatform",
-          2
-        ),
-        10
-      ) || 2
-    )
-  );
-  const midcourseDirectedTargetsPerPlatform = Math.min(
-    8,
-    Math.max(
-      1,
-      parseInt(
-        getValue(
-          "midcourseDirectedTargetsPerPlatform",
-          "midcourseDirectedTargetsPerPlatform",
-          3
-        ),
-        10
-      ) || 3
-    )
-  );
-  const midcourseSpaceAvailabilityMultiplier = Math.min(
-    0.45,
-    Math.max(
-      0.15,
-      parseFloat(
-        getValue(
-          "midcourseSpaceAvailabilityMultiplier",
-          "midcourseSpaceAvailabilityMultiplier",
-          0.30
-        )
-      ) || 0.30
-    )
-  );
 
   const launchRegion = getValue(
     "launchRegion",
@@ -319,15 +145,6 @@ export function readParamsFromUI(blueKey, redKey, root = document) {
       )
     ) || 0
   );
-  const asatPkPenalty = clamp01(
-    parseFloat(
-      getValue(
-        "asatPkPenalty",
-        "asatPkPenalty",
-        redPreset?.asatPkPenalty ?? 0
-      )
-    ) || 0
-  );
   const boostEvasionPenalty = clamp01(
     parseFloat(
       getValue(
@@ -343,15 +160,6 @@ export function readParamsFromUI(blueKey, redKey, root = document) {
         "midcourseInterceptionPenalty",
         "midcourseInterceptionPenalty",
         redPreset?.midcourseInterceptionPenalty ?? 0
-      )
-    ) || 0
-  );
-  const terminalInterceptionPenalty = clamp01(
-    parseFloat(
-      getValue(
-        "terminalInterceptionPenalty",
-        "terminalInterceptionPenalty",
-        redPreset?.terminalInterceptionPenalty ?? 0
       )
     ) || 0
   );
@@ -373,41 +181,11 @@ export function readParamsFromUI(blueKey, redKey, root = document) {
       costPerUnit_M: presetInterceptors.boost_kinetic?.costPerUnit_M ?? 15,
       phase: "boost",
     },
-    boost_laser: {
-      deployed: nSpaceBoostDirected,
-      pk: pkSpaceBoostDirected,
-      costPerUnit_M: presetInterceptors.boost_laser?.costPerUnit_M ?? 25,
-      phase: "boost",
-    },
     midcourse_gbi: {
       deployed: nInventory,
       pk: pkWarhead,
       costPerUnit_M: presetInterceptors.midcourse_gbi?.costPerUnit_M ?? 75,
       phase: "midcourse",
-    },
-    midcourse_kinetic: {
-      deployed: nMidcourseSpaceKinetic,
-      pk: pkMidcourseSpaceKinetic,
-      costPerUnit_M: presetInterceptors.midcourse_kinetic?.costPerUnit_M ?? 15,
-      phase: "midcourse",
-    },
-    midcourse_laser: {
-      deployed: nMidcourseSpaceLaser,
-      pk: pkMidcourseSpaceLaser,
-      costPerUnit_M: presetInterceptors.midcourse_laser?.costPerUnit_M ?? 25,
-      phase: "midcourse",
-    },
-    terminal_kinetic: {
-      deployed: nTerminalKinetic,
-      pk: pkTerminalKinetic,
-      costPerUnit_M: presetInterceptors.terminal_kinetic?.costPerUnit_M ?? 3,
-      phase: "terminal",
-    },
-    terminal_nuclear: {
-      deployed: nTerminalNuclear,
-      pk: pkTerminalNuclear,
-      costPerUnit_M: presetInterceptors.terminal_nuclear?.costPerUnit_M ?? 50,
-      phase: "terminal",
     },
   };
 
@@ -443,41 +221,20 @@ export function readParamsFromUI(blueKey, redKey, root = document) {
     doctrineMode,
     shotsPerTarget,
     maxShotsPerTarget,
-    pReengage,
     midcourseKineticDoctrineMode,
     midcourseKineticShotsPerTarget,
     midcourseKineticMaxShotsPerTarget,
-    midcourseKineticPReengage,
-    boostKineticDoctrineMode,
     boostKineticShotsPerTarget,
-    boostKineticMaxShotsPerTarget,
-    boostKineticPReengage,
     pkWarhead,
     pkDecoy,
     nInventory,
     nSpaceBoostKinetic,
     pkSpaceBoostKinetic,
-    nSpaceBoostDirected,
-    pkSpaceBoostDirected,
-    nMidcourseSpaceKinetic,
-    pkMidcourseSpaceKinetic,
-    nMidcourseSpaceLaser,
-    pkMidcourseSpaceLaser,
-    nTerminalKinetic,
-    pkTerminalKinetic,
-    nTerminalNuclear,
-    pkTerminalNuclear,
-    terminalShotsPerTarget,
-    boostDirectedTargetsPerPlatform,
-    midcourseDirectedTargetsPerPlatform,
-    midcourseSpaceAvailabilityMultiplier,
     launchRegion,
     asatSensingPenalty,
     asatAvailabilityPenalty,
-    asatPkPenalty,
     boostEvasionPenalty,
     midcourseInterceptionPenalty,
-    terminalInterceptionPenalty,
     nTrials,
     seed,
     blueKey,
@@ -554,33 +311,14 @@ function intSlider(label, param, min, max, step, defaultVal) {
  */
 export function blueParamsHTML(d) {
   const midcourseDoctrineMode = d.midcourseKineticDoctrineMode ?? d.doctrineMode ?? 'barrage';
-  const boostKineticDoctrineMode = d.boostKineticDoctrineMode ?? d.doctrineMode ?? 'barrage';
   const midcourseShotsPerTarget = d.midcourseKineticShotsPerTarget ?? d.shotsPerTarget ?? 2;
   const midcourseMaxShotsPerTarget = d.midcourseKineticMaxShotsPerTarget ?? d.maxShotsPerTarget ?? 4;
-  const midcoursePReengage = d.midcourseKineticPReengage ?? d.pReengage ?? 0.85;
   const boostKineticShotsPerTarget = d.boostKineticShotsPerTarget ?? d.shotsPerTarget ?? 2;
-  const boostKineticMaxShotsPerTarget = d.boostKineticMaxShotsPerTarget ?? d.maxShotsPerTarget ?? 4;
-  const boostKineticPReengage = d.boostKineticPReengage ?? d.pReengage ?? 0.85;
   const pdt  = (d.pDetectTrack * 100).toFixed(1);
   const pcw  = (d.pClassifyWarhead * 100).toFixed(1);
   const pfa  = (d.pFalseAlarmDecoy * 100).toFixed(1);
   const pkw  = (d.pkWarhead * 100).toFixed(1);
-  const preMid  = (midcoursePReengage * 100).toFixed(1);
-  const preBoostKinetic = (boostKineticPReengage * 100).toFixed(1);
   const pkbK = ((d.pkSpaceBoostKinetic ?? 0.5) * 100).toFixed(1);
-  const pkbD = ((d.pkSpaceBoostDirected ?? 0.4) * 100).toFixed(1);
-  const nMidcourseSpaceKinetic = d.nMidcourseSpaceKinetic ?? d.interceptors?.midcourse_kinetic?.deployed ?? 0;
-  const pkMidcourseSpaceKinetic = ((d.pkMidcourseSpaceKinetic ?? d.interceptors?.midcourse_kinetic?.pk ?? 0.5) * 100).toFixed(1);
-  const nMidcourseSpaceLaser = d.nMidcourseSpaceLaser ?? d.interceptors?.midcourse_laser?.deployed ?? 0;
-  const pkMidcourseSpaceLaser = ((d.pkMidcourseSpaceLaser ?? d.interceptors?.midcourse_laser?.pk ?? 0.4) * 100).toFixed(1);
-  const nTerminalKinetic = d.nTerminalKinetic ?? d.interceptors?.terminal_kinetic?.deployed ?? 0;
-  const pkTerminalKinetic = ((d.pkTerminalKinetic ?? d.interceptors?.terminal_kinetic?.pk ?? 0.8) * 100).toFixed(1);
-  const nTerminalNuclear = d.nTerminalNuclear ?? d.interceptors?.terminal_nuclear?.deployed ?? 0;
-  const pkTerminalNuclear = ((d.pkTerminalNuclear ?? d.interceptors?.terminal_nuclear?.pk ?? 0.95) * 100).toFixed(1);
-  const terminalShotsPerTarget = d.terminalShotsPerTarget ?? 2;
-  const boostDirectedTargetsPerPlatform = d.boostDirectedTargetsPerPlatform ?? 2;
-  const midcourseDirectedTargetsPerPlatform = d.midcourseDirectedTargetsPerPlatform ?? 3;
-  const midcourseSpaceAvailabilityPct = ((d.midcourseSpaceAvailabilityMultiplier ?? 0.30) * 100).toFixed(1);
   const doctrineToggleHTML = (label, param, mode) => `
       <div class="wizard-slider-row">
         <div class="wizard-slider-header">
@@ -614,7 +352,6 @@ export function blueParamsHTML(d) {
       <div class="wizard-tab active" data-tab="blue-sensing">Sensors and Detection</div>
       <div class="wizard-tab" data-tab="blue-gbi">Ground-Based Midcourse Interceptors</div>
       <div class="wizard-tab" data-tab="blue-space">Hypothetical Space-Based Interceptors</div>
-      <div class="wizard-tab" data-tab="blue-terminal">Hypothetical Terminal Interceptors</div>
     </div>
 
     <!-- Tab 1: Sensing, Tracking & Discrimination -->
@@ -679,10 +416,7 @@ export function blueParamsHTML(d) {
           ${intSlider('Ground-based kinetic midcourse shots per detected/tracked target', 'midcourseKineticShotsPerTarget', 1, 6, 1, midcourseShotsPerTarget)}
         </div>
         <div class="doctrine-midcourse-kinetic-sls-only" style="display:none">
-          <div class="wizard-param-pair">
-            ${intSlider('Ground-based kinetic midcourse max shots per detected/tracked target', 'midcourseKineticMaxShotsPerTarget', 1, 6, 1, midcourseMaxShotsPerTarget)}
-            ${probSlider('Ground-based kinetic midcourse re-engagement probability per detected/tracked target', 'midcourseKineticPReengage', preMid)}
-          </div>
+          ${intSlider('Ground-based kinetic midcourse max shots per detected/tracked target', 'midcourseKineticMaxShotsPerTarget', 1, 6, 1, midcourseMaxShotsPerTarget)}
         </div>
       </div>
     </div>
@@ -690,68 +424,9 @@ export function blueParamsHTML(d) {
     <!-- Tab 3: Hypothetical Space-Based Interceptors -->
     <div class="wizard-tab-panel" data-tab-panel="blue-space">
       <div class="wizard-param-group">
-        <h5>Boost phase</h5>
-        <div class="wizard-param-pair">
-          ${intSlider('Hypothetical space-based kinetic boost interceptors in orbit', 'nSpaceBoostKinetic', 0, 4000, 1, d.nSpaceBoostKinetic ?? 0)}
-          ${probSlider('Hypothetical space-based kinetic boost interceptor kill probability', 'pkSpaceBoostKinetic', pkbK)}
-        </div>
-        <div class="wizard-param-pair">
-          ${intSlider('Hypothetical space-based directed-energy interceptor platforms in orbit', 'nSpaceBoostDirected', 0, 4000, 1, d.nSpaceBoostDirected ?? 0)}
-          ${probSlider('Hypothetical space-based directed-energy boost interceptor kill probability', 'pkSpaceBoostDirected', pkbD)}
-        </div>
-        ${intSlider('Boost-phase directed-energy engagement opportunities per hypothetical orbital platform (aggregated capacity assumption)', 'boostDirectedTargetsPerPlatform', 1, 9, 1, boostDirectedTargetsPerPlatform)}
-        <div class="wizard-slider-note">
-          Reduced-form boost capacity assumption: this opportunities value aggregates boost-window time limits, dwell time, retarget/slew time, and track custody/handoff constraints into a single per-platform engagement budget.
-        </div>
-
-        ${doctrineToggleHTML(
-          'Hypothetical space-based kinetic boost engagement doctrine',
-          'boostKineticDoctrineMode',
-          boostKineticDoctrineMode
-        )}
-        <div class="doctrine-boost-kinetic-barrage-only">
-          ${intSlider('Hypothetical space-based kinetic boost shots per detected/tracked boost-phase missile', 'boostKineticShotsPerTarget', 1, 6, 1, boostKineticShotsPerTarget)}
-        </div>
-        <div class="doctrine-boost-kinetic-sls-only" style="display:none">
-          <div class="wizard-param-pair">
-            ${intSlider('Hypothetical space-based kinetic boost max shots per detected/tracked boost-phase missile', 'boostKineticMaxShotsPerTarget', 1, 6, 1, boostKineticMaxShotsPerTarget)}
-            ${probSlider('Hypothetical space-based kinetic boost re-engagement probability per detected/tracked boost-phase missile', 'boostKineticPReengage', preBoostKinetic)}
-          </div>
-        </div>
-
-        <hr class="wizard-phase-divider" />
-        <h5>Midcourse phase</h5>
-        <div class="wizard-param-pair">
-          ${intSlider('Hypothetical space-based kinetic midcourse interceptors in orbit', 'nMidcourseSpaceKinetic', 0, 4000, 1, nMidcourseSpaceKinetic)}
-          ${probSlider('Hypothetical space-based kinetic midcourse interceptor kill probability', 'pkMidcourseSpaceKinetic', pkMidcourseSpaceKinetic)}
-        </div>
-        <div class="wizard-param-pair">
-          ${intSlider('Hypothetical space-based directed-energy midcourse interceptor platforms in orbit', 'nMidcourseSpaceLaser', 0, 4000, 1, nMidcourseSpaceLaser)}
-          ${probSlider('Hypothetical space-based directed-energy midcourse interceptor kill probability', 'pkMidcourseSpaceLaser', pkMidcourseSpaceLaser)}
-        </div>
-        ${intSlider('Directed-energy midcourse engagement opportunities per hypothetical orbital platform', 'midcourseDirectedTargetsPerPlatform', 1, 8, 1, midcourseDirectedTargetsPerPlatform)}
-        <div class="wizard-slider-note">
-          Directed-energy systems are modeled as orbital platforms capable of multiple engagements during the phase window. Engagement opportunities are calculated as platforms x opportunities per platform x phase availability.
-        </div>
-        ${probSlider('Midcourse space interceptor availability (fraction of constellation able to engage)', 'midcourseSpaceAvailabilityMultiplier', midcourseSpaceAvailabilityPct, undefined, 15, 45)}
-      </div>
-    </div>
-
-    <!-- Tab 4: Hypothetical Terminal Defense -->
-    <div class="wizard-tab-panel" data-tab-panel="blue-terminal">
-      <div class="wizard-param-group">
-        <div class="wizard-param-pair">
-          ${intSlider('Hypothetical ground-based terminal kinetic interceptors in engagement range', 'nTerminalKinetic', 0, 4000, 1, nTerminalKinetic)}
-          ${probSlider('Hypothetical ground-based terminal kinetic interceptor kill probability', 'pkTerminalKinetic', pkTerminalKinetic)}
-        </div>
-        <div class="wizard-param-pair">
-          ${intSlider('Hypothetical ground-based terminal nuclear interceptors in engagement range', 'nTerminalNuclear', 0, 4000, 1, nTerminalNuclear)}
-          ${probSlider('Hypothetical ground-based terminal nuclear interceptor kill probability', 'pkTerminalNuclear', pkTerminalNuclear)}
-        </div>
-        ${intSlider('Terminal interceptor shots per target (barrage)', 'terminalShotsPerTarget', 1, 4, 1, terminalShotsPerTarget)}
-        <div class="wizard-slider-note">
-          Terminal interceptors engage reentering warheads only. Lightweight exoatmospheric decoys are assumed not to survive reentry into the terminal engagement regime. Terminal engagements use a committed barrage doctrine: all allocated shots are expended per target with no SLS re-engagement step.
-        </div>
+        ${intSlider('Hypothetical space-based kinetic boost interceptors in orbit', 'nSpaceBoostKinetic', 0, 4000, 1, d.nSpaceBoostKinetic ?? 0)}
+        ${probSlider('Hypothetical space-based kinetic boost interceptor kill probability', 'pkSpaceBoostKinetic', pkbK)}
+        ${intSlider('Hypothetical space-based kinetic boost shots per detected/tracked boost-phase missile', 'boostKineticShotsPerTarget', 1, 6, 1, boostKineticShotsPerTarget)}
       </div>
     </div>
 
@@ -767,10 +442,8 @@ export function redParamsHTML(d) {
   const kilotonsPerWarhead = d.kilotonsPerWarhead ?? 400;
   const asatSensing = ((d.asatSensingPenalty ?? 0) * 100).toFixed(1);
   const asatAvailability = ((d.asatAvailabilityPenalty ?? 0) * 100).toFixed(1);
-  const asatPk = ((d.asatPkPenalty ?? 0) * 100).toFixed(1);
   const boostEvade = ((d.boostEvasionPenalty ?? 0) * 100).toFixed(1);
   const midcourseIntercept = ((d.midcourseInterceptionPenalty ?? 0) * 100).toFixed(1);
-  const terminalIntercept = ((d.terminalInterceptionPenalty ?? 0) * 100).toFixed(1);
   const launchRegion = d.launchRegion ?? 'default';
   return `
     <div class="wizard-tab-strip" data-tab-group="red">
@@ -782,10 +455,8 @@ export function redParamsHTML(d) {
     <!-- Tab 1: Strike Composition -->
     <div class="wizard-tab-panel active" data-tab-panel="red-strike">
       <div class="wizard-param-group">
-        <div class="wizard-param-pair">
-          ${intSlider('Ballistic missiles in strike', 'nMissiles', 1, 500, 1, d.nMissiles)}
-          ${intSlider('Warheads per missile', 'mirvsPerMissile', 1, 16, 1, d.mirvsPerMissile)}
-        </div>
+        ${intSlider('Ballistic missiles in strike', 'nMissiles', 1, 500, 1, d.nMissiles)}
+        ${intSlider('Warheads per missile', 'mirvsPerMissile', 1, 16, 1, d.mirvsPerMissile)}
         ${intSlider('Kilotons per warhead', 'kilotonsPerWarhead', 20, 5000, 10, kilotonsPerWarhead)}
         <div class="wizard-slider-row">
           <div class="wizard-slider-header">
@@ -804,18 +475,16 @@ export function redParamsHTML(d) {
         ${intSlider('Decoys per missile', 'decoysPerMissile', 0, 40, 1, decoysPerMissile)}
         ${probSlider('Boost-phase survivability and evasion', 'boostEvasionPenalty', boostEvade, undefined, 0)}
         ${probSlider('Midcourse discrimination and allocation penalty', 'midcourseInterceptionPenalty', midcourseIntercept, undefined, 0)}
-        ${probSlider('Terminal interception effectiveness penalty', 'terminalInterceptionPenalty', terminalIntercept, undefined, 0)}
       </div>
     </div>
 
     <!-- Tab 3: Counterspace -->
     <div class="wizard-tab-panel" data-tab-panel="red-counterspace">
       <div class="wizard-param-group">
-        <div class="wizard-note">These penalties represent the aggregate outcome of Red counterspace operations (cyber/EW, kinetic ASAT, nuclear ASAT, or any combination) against Blue's space-based missile defense layer. Set each to the assumed fraction of degradation. The specific mechanism is not modeled — only the outcome matters. Terminal ground-based systems are unaffected.</div>
+        <div class="wizard-note">These penalties represent the aggregate outcome of Red counterspace operations (cyber/EW, kinetic ASAT, nuclear ASAT, or any combination) against Blue's remaining space-based boost-phase layer. Set each to the assumed fraction of degradation. The specific mechanism is not modeled — only the outcome matters.</div>
         ${probSlider('Space-layer sensing and cueing degradation', 'asatSensingPenalty', asatSensing, undefined, 0)}
         ${probSlider('Space-based interceptor availability degradation', 'asatAvailabilityPenalty', asatAvailability, undefined, 0)}
-        ${probSlider('Space-based interceptor effectiveness degradation', 'asatPkPenalty', asatPk, undefined, 0)}
-        <div class="wizard-note">Sensing degradation reduces boost and midcourse detection/tracking probability. Availability degradation reduces the number of space-based interceptors available across boost and midcourse phases. Effectiveness degradation reduces the kill probability of non-boost space interceptors. Terminal detection (ground-based radars: UEWR, TPY-2) is unaffected by all three.</div>
+        <div class="wizard-note">Sensing degradation reduces boost and midcourse detection/tracking probability. Availability degradation reduces the number of space-based boost interceptors available for engagement. Ground-based midcourse interceptors remain in the model, but are not themselves space-based assets.</div>
       </div>
     </div>
   `;
@@ -881,18 +550,6 @@ export function renderDrawerControls(container, blueKey, redKey) {
             Hypothetical space-based kinetic boost interceptor kill probability:
             <input type="number" class="param-input" data-param="pkSpaceBoostKinetic" min="0" max="1" step="0.01" value="${d.pkSpaceBoostKinetic ?? 0.5}" />
           </label>
-          <label>
-            Hypothetical space-based directed-energy interceptor platforms in orbit:
-            <input type="number" class="param-input" data-param="nSpaceBoostDirected" min="0" step="1" value="${d.nSpaceBoostDirected ?? 0}" />
-          </label>
-          <label>
-            Hypothetical space-based directed-energy boost interceptor kill probability:
-            <input type="number" class="param-input" data-param="pkSpaceBoostDirected" min="0" max="1" step="0.01" value="${d.pkSpaceBoostDirected ?? 0.4}" />
-          </label>
-          <label>
-            Boost-phase directed-energy engagement opportunities per hypothetical orbital platform (aggregated capacity assumption):
-            <input type="number" class="param-input" data-param="boostDirectedTargetsPerPlatform" min="1" max="9" step="1" value="${d.boostDirectedTargetsPerPlatform ?? 2}" />
-          </label>
         </div>
       </div>
     </div>
@@ -933,10 +590,6 @@ export function renderDrawerControls(container, blueKey, redKey) {
             <input type="number" class="param-input" data-param="asatAvailabilityPenalty" min="0" max="1" step="0.01" value="${d.asatAvailabilityPenalty ?? 0}" />
           </label>
           <label>
-            Space-based interceptor effectiveness degradation:
-            <input type="number" class="param-input" data-param="asatPkPenalty" min="0" max="1" step="0.01" value="${d.asatPkPenalty ?? 0}" />
-          </label>
-          <label>
             Boost-phase survivability and evasion:
             <input type="number" class="param-input" data-param="boostEvasionPenalty" min="0" max="1" step="0.01" value="${d.boostEvasionPenalty ?? 0}" />
           </label>
@@ -965,31 +618,8 @@ export function renderDrawerControls(container, blueKey, redKey) {
             <input type="number" class="param-input" data-param="midcourseKineticMaxShotsPerTarget" min="0" step="1" value="${d.midcourseKineticMaxShotsPerTarget ?? d.maxShotsPerTarget}" />
           </label>
           <label>
-            Ground-based kinetic midcourse P(re-engage):
-            <input type="number" class="param-input" data-param="midcourseKineticPReengage" min="0" max="1" step="0.01" value="${d.midcourseKineticPReengage ?? d.pReengage}" />
-          </label>
-          <label>
-            Hypothetical space-based kinetic boost doctrine mode:
-            <select class="param-input" data-param="boostKineticDoctrineMode">
-              <option value="barrage" ${(d.boostKineticDoctrineMode ?? d.doctrineMode) === 'barrage' ? 'selected' : ''}>Barrage</option>
-              <option value="sls" ${(d.boostKineticDoctrineMode ?? d.doctrineMode) === 'sls' ? 'selected' : ''}>Shoot-Look-Shoot</option>
-            </select>
-          </label>
-          <label>
-            Hypothetical space-based kinetic boost shots/track (Barrage):
+            Hypothetical space-based kinetic boost shots per detected/tracked boost-phase missile:
             <input type="number" class="param-input" data-param="boostKineticShotsPerTarget" min="0" step="1" value="${d.boostKineticShotsPerTarget ?? d.shotsPerTarget}" />
-          </label>
-          <label>
-            Hypothetical space-based kinetic boost max shots/track (SLS):
-            <input type="number" class="param-input" data-param="boostKineticMaxShotsPerTarget" min="0" step="1" value="${d.boostKineticMaxShotsPerTarget ?? d.maxShotsPerTarget}" />
-          </label>
-          <label>
-            Hypothetical space-based kinetic boost P(re-engage):
-            <input type="number" class="param-input" data-param="boostKineticPReengage" min="0" max="1" step="0.01" value="${d.boostKineticPReengage ?? d.pReengage}" />
-          </label>
-          <label>
-            Hypothetical terminal kinetic/nuclear shots per target (barrage):
-            <input type="number" class="param-input" data-param="terminalShotsPerTarget" min="1" max="4" step="1" value="${d.terminalShotsPerTarget ?? 2}" />
           </label>
           <label>
             Monte Carlo Trials:

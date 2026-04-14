@@ -9,7 +9,7 @@ import { initGlobe, startAnimation, setupInteraction, getGlobeGroup, getScene, d
 import { createCountriesLayer, setHighlightedCountries } from '../globe/countriesLayer.js';
 import { createHudOverlay } from '../globe/hudOverlay.js';
 import { renderDrawerControls, readParamsFromUI } from '../controls.js';
-import { renderResultsContent } from '../results.js';
+import { renderResultsContent, initResultsInteractions } from '../results.js';
 
 let el = null;
 let lastResult = null;
@@ -168,6 +168,7 @@ function showResults(params, result, elapsed) {
 
   const resultsBody = el.querySelector('#resultsBody');
   resultsBody.innerHTML = renderResultsContent(params, result);
+  initResultsInteractions(resultsBody, result, params);
 
   el.querySelector('#resultsOverlay').classList.add('open');
   el.querySelector('#btnResults').classList.add('has-data');

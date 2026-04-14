@@ -10,103 +10,7 @@ import { COUNTRIES } from '../../config/countries.js';
 import { initGlobe, startAnimation, setupInteraction, getGlobeGroup, getScene } from '../globe/globeCore.js';
 import { createCountriesLayer, setHighlightedCountries } from '../globe/countriesLayer.js';
 import { createHudOverlay } from '../globe/hudOverlay.js';
-import { renderResultsContent } from '../results.js';
-import { renderHistogramHTML } from '../charts.js';
-import { DELIVERED_KILOTONS_BENCHMARKS } from '../deliveredKilotonsBenchmarks.js';
-
-function resolveDeliveredStepSize(params) {
-  const raw = Number(params?.kilotonsPerWarhead);
-  if (!Number.isFinite(raw) || raw <= 0) return 400;
-  return raw;
-}
-
-function distributionChartOptions(distributionTitle, runParams = {}) {
-  const shared = {
-    height: 250,
-    showTitle: false,
-    yLabel: 'Number of Trials',
-    yTargetTicks: 5,
-    targetVisualSlots: 120,
-    minVisualSubBins: 1,
-    maxVisualSubBins: 12,
-  };
-  if (distributionTitle === 'Delivered Kilotons') {
-    const stepSize = resolveDeliveredStepSize(runParams);
-    return {
-      ...shared,
-      xLabel: 'Delivered Kilotons',
-      binStrategy: 'step-discrete',
-      stepSize,
-      bins: 64,
-      integerMaxBins: 96,
-      integerMinNonZeroRatio: 0.35,
-      integerMinReadableBins: 18,
-      referenceMarkers: DELIVERED_KILOTONS_BENCHMARKS,
-      maxVisibleReferenceMarkers: 7,
-      maxVisibleReferenceLabels: 4,
-      referenceLabelMinGapPct: 10,
-    };
-  }
-  if (distributionTitle === 'Penetrated Real Warheads') {
-    return {
-      ...shared,
-      xLabel: 'Penetrated Real Warheads',
-      binStrategy: 'integer',
-      bins: 64,
-      integerMaxBins: 96,
-      integerMinNonZeroRatio: 0.35,
-      integerMinReadableBins: 18,
-    };
-  }
-  return {
-    ...shared,
-    xLabel: 'Intercepted Real Warheads',
-    binStrategy: 'integer',
-    bins: 64,
-    integerMaxBins: 96,
-    integerMinNonZeroRatio: 0.35,
-    integerMinReadableBins: 18,
-  };
-}
-
-function initDistributionViewer(rootEl, runResult, runParams) {
-  const viewer = rootEl.querySelector('[data-dist-viewer]');
-  if (!viewer) return;
-
-  const titleEl = viewer.querySelector('[data-dist-title]');
-  const indexEl = viewer.querySelector('[data-dist-index]');
-  const stageEl = viewer.querySelector('[data-dist-stage]');
-  const prevBtn = viewer.querySelector('[data-dist-nav="prev"]');
-  const nextBtn = viewer.querySelector('[data-dist-nav="next"]');
-  if (!titleEl || !indexEl || !stageEl || !prevBtn || !nextBtn) return;
-
-  const distributions = [
-    { title: 'Delivered Kilotons', values: runResult.deliveredKilotons ?? runResult.ktDelivered ?? [] },
-    { title: 'Penetrated Real Warheads', values: runResult.penReal ?? [] },
-    { title: 'Intercepted Real Warheads', values: runResult.intReal ?? [] },
-  ];
-
-  let activeIndex = 0;
-
-  const renderActive = () => {
-    const active = distributions[activeIndex];
-    titleEl.textContent = active.title;
-    indexEl.textContent = `${activeIndex + 1} / ${distributions.length}`;
-    const chartOpts = distributionChartOptions(active.title, runParams);
-    stageEl.innerHTML = renderHistogramHTML(active.values, chartOpts.bins, active.title, chartOpts);
-  };
-
-  prevBtn.addEventListener('click', () => {
-    activeIndex = (activeIndex - 1 + distributions.length) % distributions.length;
-    renderActive();
-  });
-  nextBtn.addEventListener('click', () => {
-    activeIndex = (activeIndex + 1) % distributions.length;
-    renderActive();
-  });
-
-  renderActive();
-}
+import { renderResultsContent, initResultsInteractions } from '../results.js';
 
 export function renderResultsScreen(container, data, transitionFn) {
   const { blueKey, redKey, runParams, runResult, runElapsed } = data;
@@ -152,7 +56,7 @@ export function renderResultsScreen(container, data, transitionFn) {
   setHighlightedCountries([blueKey, redKey]);
   startAnimation();
   setupInteraction(globeContainer);
-  initDistributionViewer(el, runResult, runParams);
+  initResultsInteractions(el, runResult, runParams);
 
   el.querySelector('.btn-reset').addEventListener('click', () => {
     transitionFn(STATES.WIZARD);

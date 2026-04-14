@@ -780,6 +780,22 @@ input[type="range"]::-moz-range-thumb {
   color: var(--text-primary);
 }
 
+.results-content .wizard-tab-strip {
+  margin-bottom: 16px;
+}
+
+.results-content .wizard-tab {
+  font-size: 10px;
+}
+
+.results-content .wizard-tab.active {
+  border-bottom-color: var(--accent-amber);
+}
+
+.results-content .wizard-tab-panel.active {
+  display: block;
+}
+
 .results-content h3 {
   font-family: var(--font-mono);
   font-size: 10px;
@@ -792,6 +808,11 @@ input[type="range"]::-moz-range-thumb {
 }
 
 .results-content h3:first-child {
+  margin-top: 0;
+  border-top: none;
+}
+
+.results-content .wizard-tab-panel h3:first-child {
   margin-top: 0;
   border-top: none;
 }

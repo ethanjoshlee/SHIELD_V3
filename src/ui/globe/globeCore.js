@@ -24,12 +24,19 @@ let isDragging = false;
 let lastPointerX = 0;
 let lastPointerY = 0;
 let targetRotY = null; // set by rotateToCountry(); null = free mode
+let targetCameraArcX = null; // set by rotateToCountry(); null = free mode
 
 // Camera elevation arc — vertical reframing without globe tilt
 let cameraArcX = 0;
 
 function applyRotation() {
   spinGroup.rotation.y = rotY;
+}
+
+function applyCameraArc() {
+  const r = 700;
+  camera.position.set(0, r * Math.sin(cameraArcX), r * Math.cos(cameraArcX));
+  camera.lookAt(0, 0, 0);
 }
 
 export function initGlobe(container) {
@@ -39,7 +46,8 @@ export function initGlobe(container) {
   const h = container.clientHeight;
 
   camera = new THREE.PerspectiveCamera(45, w / h, 1, 2000);
-  camera.position.set(0, 0, 700);
+  cameraArcX = 0;
+  applyCameraArc();
 
   renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
   renderer.setSize(w, h);
@@ -86,10 +94,20 @@ export function startAnimation() {
         rotY += velY;
         velY *= DAMPING;
         applyRotation();
-      } else if (targetRotY !== null) {
-        // rotateToCountry slerp — spin only
-        rotY += (targetRotY - rotY) * 0.05;
-        if (Math.abs(targetRotY - rotY) < 0.01) { rotY = targetRotY; targetRotY = null; }
+      } else if (targetRotY !== null || targetCameraArcX !== null) {
+        // rotateToCountry easing — spin + vertical reframing
+        if (targetRotY !== null) {
+          rotY += (targetRotY - rotY) * 0.05;
+          if (Math.abs(targetRotY - rotY) < 0.01) { rotY = targetRotY; targetRotY = null; }
+        }
+        if (targetCameraArcX !== null) {
+          cameraArcX += (targetCameraArcX - cameraArcX) * 0.08;
+          if (Math.abs(targetCameraArcX - cameraArcX) < 0.005) {
+            cameraArcX = targetCameraArcX;
+            targetCameraArcX = null;
+          }
+          applyCameraArc();
+        }
         applyRotation();
       } else {
         // Auto-rotate — spin only
@@ -119,6 +137,7 @@ export function setupInteraction(container) {
     lastPointerY = e.clientY;
     velY = 0;
     targetRotY = null;
+    targetCameraArcX = null;
     canvas.setPointerCapture(e.pointerId);
   });
 
@@ -134,9 +153,7 @@ export function setupInteraction(container) {
     // Vertical drag — arc camera up/down without tilting the globe body
     cameraArcX -= dy * CAMERA_SENSITIVITY;
     cameraArcX = Math.max(-MAX_CAMERA_ARC, Math.min(MAX_CAMERA_ARC, cameraArcX));
-    const r = 700;
-    camera.position.set(0, r * Math.sin(cameraArcX), r * Math.cos(cameraArcX));
-    camera.lookAt(0, 0, 0);
+    applyCameraArc();
 
     lastPointerX = e.clientX;
     lastPointerY = e.clientY;
@@ -153,9 +170,18 @@ export function setupInteraction(container) {
   });
 }
 
-export function rotateToCountry(lng) {
-  // Rotate globe so the country is roughly centered (spin only)
+export function rotateToCountry(center) {
+  const lng = typeof center === 'number' ? center : center?.lng ?? 0;
+  const lat = typeof center === 'number' ? 0 : center?.lat ?? 0;
+
+  // Rotate globe so the country is roughly centered horizontally.
   targetRotY = -THREE.MathUtils.degToRad(lng) - Math.PI / 2;
+
+  // Reframe vertically by moving the camera along its elevation arc.
+  // The camera arc is intentionally shallower than a 1:1 latitude mapping
+  // so high-latitude countries still feel natural on the globe.
+  const latFraction = THREE.MathUtils.clamp(lat / 90, -1, 1);
+  targetCameraArcX = THREE.MathUtils.clamp(latFraction * (MAX_CAMERA_ARC * 0.95), -MAX_CAMERA_ARC, MAX_CAMERA_ARC);
 }
 
 export function disposeGlobe() {

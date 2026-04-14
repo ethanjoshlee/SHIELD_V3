@@ -31,12 +31,6 @@ const DOCTRINE_GROUPS = [
     barrageClass: 'doctrine-midcourse-kinetic-barrage-only',
     slsClass: 'doctrine-midcourse-kinetic-sls-only',
   },
-  {
-    param: 'boostKineticDoctrineMode',
-    defaultMode: 'barrage',
-    barrageClass: 'doctrine-boost-kinetic-barrage-only',
-    slsClass: 'doctrine-boost-kinetic-sls-only',
-  },
 ];
 
 function resolveBluePresetParamValue(bluePreset, param) {
@@ -54,42 +48,14 @@ function resolveBluePresetParamValue(bluePreset, param) {
       return bluePreset.interceptors?.boost_kinetic?.deployed;
     case 'pkSpaceBoostKinetic':
       return bluePreset.interceptors?.boost_kinetic?.pk;
-    case 'nSpaceBoostDirected':
-      return bluePreset.interceptors?.boost_laser?.deployed;
-    case 'pkSpaceBoostDirected':
-      return bluePreset.interceptors?.boost_laser?.pk;
-    case 'nMidcourseSpaceKinetic':
-      return bluePreset.interceptors?.midcourse_kinetic?.deployed;
-    case 'pkMidcourseSpaceKinetic':
-      return bluePreset.interceptors?.midcourse_kinetic?.pk;
-    case 'nMidcourseSpaceLaser':
-      return bluePreset.interceptors?.midcourse_laser?.deployed;
-    case 'pkMidcourseSpaceLaser':
-      return bluePreset.interceptors?.midcourse_laser?.pk;
-    case 'nTerminalKinetic':
-      return bluePreset.interceptors?.terminal_kinetic?.deployed;
-    case 'pkTerminalKinetic':
-      return bluePreset.interceptors?.terminal_kinetic?.pk;
-    case 'nTerminalNuclear':
-      return bluePreset.interceptors?.terminal_nuclear?.deployed;
-    case 'pkTerminalNuclear':
-      return bluePreset.interceptors?.terminal_nuclear?.pk;
     case 'midcourseKineticDoctrineMode':
       return bluePreset.doctrineMode;
     case 'midcourseKineticShotsPerTarget':
       return bluePreset.shotsPerTarget;
     case 'midcourseKineticMaxShotsPerTarget':
       return bluePreset.maxShotsPerTarget;
-    case 'midcourseKineticPReengage':
-      return bluePreset.pReengage;
-    case 'boostKineticDoctrineMode':
-      return bluePreset.doctrineMode;
     case 'boostKineticShotsPerTarget':
       return bluePreset.shotsPerTarget;
-    case 'boostKineticMaxShotsPerTarget':
-      return bluePreset.maxShotsPerTarget;
-    case 'boostKineticPReengage':
-      return bluePreset.pReengage;
     default:
       return undefined;
   }

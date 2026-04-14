@@ -229,15 +229,135 @@ export function setHighlightedCountries(keys) {
   renderTexture();
 }
 
+function normalizeLongitude(lng) {
+  let normalized = lng;
+  while (normalized > 180) normalized -= 360;
+  while (normalized < -180) normalized += 360;
+  return normalized;
+}
+
+function unwrapPolygonLongitudes(points) {
+  if (!points || !points.length) return [];
+
+  const unwrapped = [[points[0][0], points[0][1]]];
+  let prevLng = points[0][0];
+
+  for (let i = 1; i < points.length; i++) {
+    let [lng, lat] = points[i];
+    while (lng - prevLng > 180) lng -= 360;
+    while (lng - prevLng < -180) lng += 360;
+    unwrapped.push([lng, lat]);
+    prevLng = lng;
+  }
+
+  return unwrapped;
+}
+
+function getPolygonArea(points) {
+  const poly = unwrapPolygonLongitudes(points);
+  if (poly.length < 3) return 0;
+
+  let twiceArea = 0;
+  for (let i = 0; i < poly.length; i++) {
+    const [x1, y1] = poly[i];
+    const [x2, y2] = poly[(i + 1) % poly.length];
+    twiceArea += (x1 * y2) - (x2 * y1);
+  }
+
+  return Math.abs(twiceArea) * 0.5;
+}
+
+function getPolygonCenterLongitude(points) {
+  const poly = unwrapPolygonLongitudes(points);
+  if (!poly.length) return 0;
+
+  let minLng = Infinity;
+  let maxLng = -Infinity;
+
+  for (const [lng] of poly) {
+    if (lng < minLng) minLng = lng;
+    if (lng > maxLng) maxLng = lng;
+  }
+
+  return normalizeLongitude((minLng + maxLng) * 0.5);
+}
+
+function getPolygonCenterLatitude(points) {
+  if (!points || !points.length) return 0;
+
+  let minLat = Infinity;
+  let maxLat = -Infinity;
+
+  for (const [, lat] of points) {
+    if (lat < minLat) minLat = lat;
+    if (lat > maxLat) maxLat = lat;
+  }
+
+  if (!Number.isFinite(minLat) || !Number.isFinite(maxLat)) return 0;
+  return (minLat + maxLat) * 0.5;
+}
+
+function getWeightedCenter(polygons, anchorLng) {
+  let weightedLngSum = 0;
+  let weightedLatSum = 0;
+  let totalArea = 0;
+
+  for (const { area, centerLng, centerLat } of polygons) {
+    let adjustedLng = centerLng;
+    while (adjustedLng - anchorLng > 180) adjustedLng -= 360;
+    while (adjustedLng - anchorLng < -180) adjustedLng += 360;
+    weightedLngSum += adjustedLng * area;
+    weightedLatSum += centerLat * area;
+    totalArea += area;
+  }
+
+  if (totalArea <= 0) {
+    return { lng: normalizeLongitude(anchorLng), lat: 0 };
+  }
+
+  return {
+    lng: normalizeLongitude(weightedLngSum / totalArea),
+    lat: weightedLatSum / totalArea,
+  };
+}
+
 /**
- * Get the approximate center longitude for a country (for camera rotation).
+ * Get the approximate geographic center for a country (for camera framing).
  */
 export function getCountryCenter(key) {
   const data = COUNTRY_POLYGONS[key];
-  if (!data) return 0;
-  // Average longitude of first polygon
-  const poly = data.polygons[0];
-  let sumLng = 0;
-  for (const [lng] of poly) sumLng += lng;
-  return sumLng / poly.length;
+  if (!data) return { lng: 0, lat: 0 };
+  if (Number.isFinite(data.centerLng) || Number.isFinite(data.centerLat)) {
+    return {
+      lng: normalizeLongitude(Number.isFinite(data.centerLng) ? data.centerLng : 0),
+      lat: Number.isFinite(data.centerLat) ? data.centerLat : 0,
+    };
+  }
+
+  const polygonStats = data.polygons
+    .map((poly) => ({
+      area: getPolygonArea(poly),
+      centerLng: getPolygonCenterLongitude(poly),
+      centerLat: getPolygonCenterLatitude(poly),
+    }))
+    .filter(({ area }) => area > 0)
+    .sort((a, b) => b.area - a.area);
+
+  if (!polygonStats.length) return { lng: 0, lat: 0 };
+
+  const largest = polygonStats[0];
+  const secondLargestArea = polygonStats[1]?.area ?? 0;
+
+  // Countries like Russia may include tiny outlier fragments near the
+  // antimeridian. If one polygon clearly dominates, use that mainland center.
+  if (secondLargestArea <= 0 || (largest.area / secondLargestArea) >= 3) {
+    return {
+      lng: normalizeLongitude(largest.centerLng),
+      lat: largest.centerLat,
+    };
+  }
+
+  // Composite regions like Europe are better framed by an area-weighted
+  // average across their major polygons.
+  return getWeightedCenter(polygonStats, largest.centerLng);
 }

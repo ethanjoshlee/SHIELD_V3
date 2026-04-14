@@ -31,7 +31,6 @@ export function computeSummary(arrays, realWarheadsConst, params = {}) {
     boostMissilesKilled = [],
     boostWarheadsDestroyed = [],
     midcourseWarheadsKilled = [],
-    terminalWarheadsKilled = [],
     deliveredKilotons = [],
     ktDelivered = [],
   } = arrays;
@@ -68,7 +67,6 @@ export function computeSummary(arrays, realWarheadsConst, params = {}) {
     summary.meanBoostMissilesKilled = mean(boostMissilesKilled);
     summary.meanBoostWarheadsDestroyed = mean(boostWarheadsDestroyed);
     summary.meanMidcourseWarheadsKilled = mean(midcourseWarheadsKilled);
-    summary.meanTerminalWarheadsKilled = mean(terminalWarheadsKilled);
   }
 
   // Delivered yield stats (kilotons)
