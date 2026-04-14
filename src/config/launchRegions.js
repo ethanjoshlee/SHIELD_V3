@@ -34,14 +34,14 @@ export const LAUNCH_REGION_PRESETS = {
       spaceBoostKinetic: 0.54,
     },
   },
-  slbm_pacific: {
-    label: "SLBM (Pacific Origin)",
+  pacific_maritime: {
+    label: "Pacific Maritime Origin",
     coverage: {
       spaceBoostKinetic: 0.80,
     },
   },
-  slbm_atlantic: {
-    label: "SLBM (Atlantic Origin)",
+  atlantic_maritime: {
+    label: "Atlantic Maritime Origin",
     coverage: {
       spaceBoostKinetic: 0.76,
     },
@@ -53,7 +53,7 @@ export const LAUNCH_REGION_ORDER = [
   "china_interior",
   "russia_west",
   "russia_east",
-  "slbm_pacific",
-  "slbm_atlantic",
+  "pacific_maritime",
+  "atlantic_maritime",
   "default",
 ];

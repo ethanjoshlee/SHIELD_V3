@@ -62,7 +62,7 @@ export function computeSummary(arrays, realWarheadsConst, params = {}) {
       realWarheadsConst > 0 ? mean(penReal) / realWarheadsConst : 0,
   };
 
-  // Per-phase stats (only populated in multi-phase mode)
+  // Per-phase stats for the modeled boost and midcourse engagement chain.
   if (boostMissilesKilled.length > 0) {
     summary.meanBoostMissilesKilled = mean(boostMissilesKilled);
     summary.meanBoostWarheadsDestroyed = mean(boostWarheadsDestroyed);

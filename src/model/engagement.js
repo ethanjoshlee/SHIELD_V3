@@ -1,7 +1,5 @@
 /**
- * Classification and Engagement logic.
- *
- * Supports both legacy (single interceptor type) and multi-type engagement.
+ * Classification and engagement logic.
  */
 
 import { bernoulli } from '../utils/rng.js';
@@ -74,12 +72,4 @@ export function engageWithType(tgt, pk, doctrineParams, inventory) {
     shotsFired,
     inventoryRemaining: inventory - shotsFired,
   };
-}
-
-/**
- * Legacy engageTarget — wraps engageWithType using the old single-Pk interface.
- * Kept for backward compatibility.
- */
-export function engageTarget(tgt, params, inventory) {
-  return engageWithType(tgt, params.pkWarhead, params, inventory);
 }

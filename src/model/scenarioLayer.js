@@ -33,17 +33,11 @@ export function buildBoostScenario(params) {
   const preset = LAUNCH_REGION_PRESETS[launchRegion];
 
   const deployedByType = {
-    boost_kinetic: asFiniteNonNegative(
-      params.nSpaceBoostKinetic,
-      params.interceptors?.boost_kinetic?.deployed ?? 0
-    ),
+    boost_kinetic: asFiniteNonNegative(params.nSpaceBoostKinetic, 0),
   };
 
   const pkByType = {
-    boost_kinetic: asProbability(
-      params.pkSpaceBoostKinetic,
-      params.interceptors?.boost_kinetic?.pk ?? 0
-    ),
+    boost_kinetic: asProbability(params.pkSpaceBoostKinetic, 0.5),
   };
 
   // Outcome-based ASAT availability penalty (replaces mechanism-based cyber/h2k/nuclear model).

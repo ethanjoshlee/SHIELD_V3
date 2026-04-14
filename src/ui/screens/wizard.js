@@ -12,6 +12,20 @@ import { STATES } from '../stateMachine.js';
 import { COUNTRIES } from '../../config/countries.js';
 import { DEFAULTS } from '../../state.js';
 import { LAUNCH_REGION_PRESETS } from '../../config/launchRegions.js';
+import {
+  BLUE_DEFENSE_CONTROLLED_FIELDS,
+  BLUE_DEFENSE_PRESET_FIELDS,
+  BLUE_DEFENSE_ALWAYS_EDITABLE_FIELDS,
+  DEFAULT_BLUE_DEFENSE_PRESET,
+  getBlueDefensePresetMeta,
+  resolveBlueDefenseProfile,
+} from '../../config/blueDefensePresets.js';
+import {
+  DEFAULT_RED_ATTACK_PRESET,
+  RED_ATTACK_PRESET_FIELDS,
+  getRedAttackPresetMeta,
+  resolveRedAttackProfile,
+} from '../../config/redAttackPresets.js';
 import { initGlobe, startAnimation, setupInteraction, getGlobeGroup, getScene, rotateToCountry } from '../globe/globeCore.js';
 import { createCountriesLayer, setHighlightedCountries, getCountryCenter } from '../globe/countriesLayer.js';
 import { createHudOverlay } from '../globe/hudOverlay.js';
@@ -19,9 +33,9 @@ import { blueParamsHTML, redParamsHTML, simParamsHTML, readParamsFromUI } from '
 
 const STEPS = [
   { key: 'sides', title: '', subtitle: '', number: '01 / 04' },
-  { key: 'blue', title: 'CONFIGURE BLUE', subtitle: 'Baseline defense capabilities and parameters', number: '02 / 04' },
-  { key: 'red',  title: 'CONFIGURE RED', subtitle: 'Attack capabilities and parameters', number: '03 / 04' },
-  { key: 'sim',  title: 'MODEL COMPUTATION', subtitle: 'Trial settings and model parameters', number: '04 / 04' },
+  { key: 'blue', title: 'Configure Blue', subtitle: 'Defense capabilities, doctrine, and preset assumptions', number: '02 / 04' },
+  { key: 'red',  title: 'Configure Red', subtitle: 'Attack capabilities, countermeasures, and preset assumptions', number: '03 / 04' },
+  { key: 'sim',  title: 'Model Computation', subtitle: 'Trial settings and model parameters', number: '04 / 04' },
 ];
 
 const DOCTRINE_GROUPS = [
@@ -33,90 +47,36 @@ const DOCTRINE_GROUPS = [
   },
 ];
 
-function resolveBluePresetParamValue(bluePreset, param) {
-  if (!bluePreset) return undefined;
-  if (bluePreset[param] !== undefined && bluePreset[param] !== null) {
-    return bluePreset[param];
-  }
+function formatBlueSummaryValue(param, rawValue) {
+  if (rawValue == null || rawValue === '') return '-';
 
-  switch (param) {
-    case 'nInventory':
-      return bluePreset.interceptors?.midcourse_gbi?.deployed;
-    case 'pkWarhead':
-      return bluePreset.interceptors?.midcourse_gbi?.pk;
-    case 'nSpaceBoostKinetic':
-      return bluePreset.interceptors?.boost_kinetic?.deployed;
-    case 'pkSpaceBoostKinetic':
-      return bluePreset.interceptors?.boost_kinetic?.pk;
-    case 'midcourseKineticDoctrineMode':
-      return bluePreset.doctrineMode;
-    case 'midcourseKineticShotsPerTarget':
-      return bluePreset.shotsPerTarget;
-    case 'midcourseKineticMaxShotsPerTarget':
-      return bluePreset.maxShotsPerTarget;
-    case 'boostKineticShotsPerTarget':
-      return bluePreset.shotsPerTarget;
-    default:
-      return undefined;
-  }
+  const value = Number(rawValue);
+  if (!Number.isFinite(value)) return String(rawValue);
+
+  return `${(value * 100).toFixed(1)}%`;
 }
 
-function summarizeRedMissileClasses(redPreset) {
-  const classes = redPreset?.missileClasses;
-  if (!classes) return null;
+function formatRedSummaryValue(param, rawValue) {
+  if (rawValue == null || rawValue === '') return '-';
 
-  let totalMissiles = 0;
-  let mirvWeighted = 0;
-  let decoysPerMissileWeighted = 0;
-  let yieldWeighted = 0;
-  let boostEvasionWeighted = 0;
-
-  for (const cls of Object.values(classes)) {
-    const count = Math.max(0, Number(cls?.count) || 0);
-    if (!count) continue;
-    const mirvs = Math.max(1, Number(cls?.mirvsPerMissile) || 1);
-    const decoysPerWarhead = Math.max(0, Number(cls?.decoysPerWarhead) || 0);
-    const yieldKt = Math.max(0, Number(cls?.yieldKt) || 0);
-    const boostEvasion = Math.max(0, Number(cls?.boostEvasion) || 0);
-
-    totalMissiles += count;
-    mirvWeighted += count * mirvs;
-    decoysPerMissileWeighted += count * (decoysPerWarhead * mirvs);
-    yieldWeighted += count * yieldKt;
-    boostEvasionWeighted += count * boostEvasion;
+  if (param === 'launchRegion') {
+    return LAUNCH_REGION_PRESETS[rawValue]?.label ?? rawValue;
   }
 
-  if (!totalMissiles) return null;
+  const value = Number(rawValue);
+  if (!Number.isFinite(value)) return String(rawValue);
 
-  return {
-    nMissiles: Math.round(totalMissiles),
-    mirvsPerMissile: Math.max(1, Math.round(mirvWeighted / totalMissiles)),
-    decoysPerMissile: Math.max(0, Math.round(decoysPerMissileWeighted / totalMissiles)),
-    kilotonsPerWarhead: Math.max(20, Math.round(yieldWeighted / totalMissiles)),
-    boostEvasionPenalty: Math.max(0, Math.min(0.999, boostEvasionWeighted / totalMissiles)),
-  };
-}
-
-function resolveRedPresetParamValue(redPreset, param, redSummary) {
-  if (!redPreset) return undefined;
-  if (redPreset[param] !== undefined && redPreset[param] !== null) {
-    return redPreset[param];
+  if (param === 'kilotonsPerWarhead') return `${Math.round(value)} kt`;
+  if (
+    param === 'boostEvasionPenalty' ||
+    param === 'midcourseInterceptionPenalty' ||
+    param === 'asatSensingPenalty' ||
+    param === 'asatAvailabilityPenalty'
+  ) {
+    return `${(value * 100).toFixed(1)}%`;
   }
 
-  switch (param) {
-    case 'nMissiles':
-      return redSummary?.nMissiles;
-    case 'mirvsPerMissile':
-      return redSummary?.mirvsPerMissile;
-    case 'decoysPerMissile':
-      return redSummary?.decoysPerMissile;
-    case 'kilotonsPerWarhead':
-      return redSummary?.kilotonsPerWarhead;
-    case 'boostEvasionPenalty':
-      return redSummary?.boostEvasionPenalty;
-    default:
-      return undefined;
-  }
+  return Number.isInteger(value) ? String(value) : value.toFixed(1);
 }
 
 export function renderWizard(container, transitionFn) {
@@ -125,6 +85,58 @@ export function renderWizard(container, transitionFn) {
   let currentStep = 0;
   let selectedBlue = null;
   let selectedRed = null;
+  const blueCustomDrafts = {};
+  const redCustomDrafts = {};
+
+  function getParamInput(param) {
+    return el?.querySelector(`[data-param="${param}"]`);
+  }
+
+  function currentBlueDefensePreset() {
+    return getParamInput('blueDefensePreset')?.value ?? DEFAULT_BLUE_DEFENSE_PRESET;
+  }
+
+  function currentRedAttackPreset() {
+    return getParamInput('redAttackPreset')?.value ?? DEFAULT_RED_ATTACK_PRESET;
+  }
+
+  function snapshotCurrentBlueDraft() {
+    const snapshot = {};
+    for (const param of BLUE_DEFENSE_PRESET_FIELDS) {
+      snapshot[param] = getParamInput(param)?.value ?? '';
+    }
+    return snapshot;
+  }
+
+  function saveCurrentBlueCustomDraft() {
+    if (!selectedBlue) return;
+    blueCustomDrafts[selectedBlue] = snapshotCurrentBlueDraft();
+  }
+
+  function activateRedTab(tabId) {
+    const redRoot = el?.querySelector('[data-red-attack-root]');
+    if (!redRoot) return;
+
+    redRoot.querySelectorAll('.red-custom-tabs .wizard-tab').forEach((tab) => {
+      tab.classList.toggle('active', tab.dataset.tab === tabId);
+    });
+    redRoot.querySelectorAll('.wizard-tab-panel').forEach((panel) => {
+      panel.classList.toggle('active', panel.dataset.tabPanel === tabId);
+    });
+  }
+
+  function snapshotCurrentRedDraft() {
+    const snapshot = {};
+    for (const param of RED_ATTACK_PRESET_FIELDS) {
+      snapshot[param] = getParamInput(param)?.value ?? '';
+    }
+    return snapshot;
+  }
+
+  function saveCurrentRedCustomDraft() {
+    if (!selectedRed) return;
+    redCustomDrafts[selectedRed] = snapshotCurrentRedDraft();
+  }
 
   function getCountriesList(side) {
     const countries = COUNTRIES[side];
@@ -213,40 +225,184 @@ export function renderWizard(container, transitionFn) {
     setHighlightedCountries(highlights);
   }
 
+  function setParamValue(param, val) {
+    const probRange = el.querySelector(`[data-prob-target="${param}"]`);
+    if (probRange) {
+      probRange.value = (parseFloat(val) * 100).toFixed(1);
+      probRange.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+
+    const input = el.querySelector(`[data-param="${param}"]`);
+    if (!input) return;
+    if (input.type === 'range') {
+      const min = input.min !== '' ? parseFloat(input.min) : null;
+      const max = input.max !== '' ? parseFloat(input.max) : null;
+      const numericVal = parseFloat(val);
+      if (Number.isFinite(numericVal)) {
+        let nextNumeric = numericVal;
+        if (Number.isFinite(min)) nextNumeric = Math.max(min, nextNumeric);
+        if (Number.isFinite(max)) nextNumeric = Math.min(max, nextNumeric);
+        input.value = String(nextNumeric);
+      } else {
+        input.value = String(val);
+      }
+    } else {
+      input.value = String(val);
+    }
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+
+  function updateBlueDefensePresetUI() {
+    const blueRoot = el?.querySelector('[data-blue-defense-root]');
+    if (!blueRoot) return;
+
+    const presetKey = currentBlueDefensePreset();
+    const isCustom = presetKey === 'custom';
+    blueRoot.dataset.blueDefenseMode = isCustom ? 'custom' : 'preset';
+
+    blueRoot.querySelectorAll('[data-blue-defense-preset]').forEach((btn) => {
+      const selected = btn.dataset.blueDefensePreset === presetKey;
+      btn.classList.toggle('selected', selected);
+      btn.setAttribute('aria-pressed', selected ? 'true' : 'false');
+    });
+
+    const meta = getBlueDefensePresetMeta(presetKey);
+    const titleEl = blueRoot.querySelector('[data-blue-preset-title]');
+    const descriptionEl = blueRoot.querySelector('[data-blue-preset-description]');
+    if (titleEl) titleEl.textContent = meta.title;
+    if (descriptionEl) descriptionEl.textContent = meta.description;
+
+    blueRoot.querySelectorAll('[data-blue-summary-value]').forEach((node) => {
+      const param = node.dataset.blueSummaryValue;
+      node.textContent = formatBlueSummaryValue(param, getParamInput(param)?.value);
+    });
+  }
+
+  function applyResolvedBlueDefenseProfile(presetKey, { preserveEditable = true } = {}) {
+    if (!selectedBlue) return;
+
+    const overrides = {};
+    if (preserveEditable) {
+      for (const param of BLUE_DEFENSE_ALWAYS_EDITABLE_FIELDS) {
+        const currentValue = getParamInput(param)?.value;
+        if (currentValue == null || currentValue === '') continue;
+        overrides[param] = currentValue;
+      }
+    }
+
+    const profile = resolveBlueDefenseProfile(selectedBlue, presetKey, overrides);
+    for (const param of BLUE_DEFENSE_PRESET_FIELDS) {
+      if (profile[param] === undefined || profile[param] === null) continue;
+      setParamValue(param, profile[param]);
+    }
+  }
+
+  function setBlueDefensePreset(presetKey, { preserveEditable = true, saveDraft = true } = {}) {
+    const presetInput = getParamInput('blueDefensePreset');
+    if (!presetInput) return;
+
+    const previousPreset = currentBlueDefensePreset();
+    if (saveDraft && previousPreset === 'custom' && presetKey !== 'custom') {
+      saveCurrentBlueCustomDraft();
+    }
+
+    presetInput.value = presetKey;
+    presetInput.dispatchEvent(new Event('change', { bubbles: true }));
+
+    if (presetKey === 'custom') {
+      const draft = selectedBlue ? blueCustomDrafts[selectedBlue] : null;
+      if (draft) {
+        for (const param of BLUE_DEFENSE_PRESET_FIELDS) {
+          if (draft[param] == null || draft[param] === '') continue;
+          setParamValue(param, draft[param]);
+        }
+      }
+    } else {
+      applyResolvedBlueDefenseProfile(presetKey, { preserveEditable });
+    }
+
+    updateBlueDefensePresetUI();
+  }
+
+  function updateRedAttackPresetUI() {
+    const redRoot = el?.querySelector('[data-red-attack-root]');
+    if (!redRoot) return;
+
+    const presetKey = currentRedAttackPreset();
+    const isCustom = presetKey === 'custom';
+    redRoot.dataset.redAttackMode = isCustom ? 'custom' : 'preset';
+
+    redRoot.querySelectorAll('[data-red-attack-preset]').forEach((btn) => {
+      const selected = btn.dataset.redAttackPreset === presetKey;
+      btn.classList.toggle('selected', selected);
+      btn.setAttribute('aria-pressed', selected ? 'true' : 'false');
+    });
+
+    const meta = getRedAttackPresetMeta(presetKey);
+    const titleEl = redRoot.querySelector('[data-red-preset-title]');
+    const descriptionEl = redRoot.querySelector('[data-red-preset-description]');
+    if (titleEl) titleEl.textContent = meta.title;
+    if (descriptionEl) descriptionEl.textContent = meta.description;
+
+    redRoot.querySelectorAll('[data-red-summary-value]').forEach((node) => {
+      const param = node.dataset.redSummaryValue;
+      node.textContent = formatRedSummaryValue(param, getParamInput(param)?.value);
+    });
+
+    if (!isCustom) activateRedTab('red-strike');
+  }
+
+  function applyResolvedRedAttackProfile(presetKey, { preserveMissiles = true } = {}) {
+    if (!selectedRed) return;
+
+    const currentMissiles = preserveMissiles ? getParamInput('nMissiles')?.value : null;
+    const overrides =
+      preserveMissiles && currentMissiles != null && currentMissiles !== ''
+        ? { nMissiles: Number(currentMissiles) }
+        : {};
+    const profile = resolveRedAttackProfile(selectedRed, presetKey, overrides);
+
+    for (const param of RED_ATTACK_PRESET_FIELDS) {
+      if (profile[param] === undefined || profile[param] === null) continue;
+      setParamValue(param, profile[param]);
+    }
+  }
+
+  function setRedAttackPreset(presetKey, { preserveMissiles = true, saveDraft = true } = {}) {
+    const presetInput = getParamInput('redAttackPreset');
+    if (!presetInput) return;
+
+    const previousPreset = currentRedAttackPreset();
+    if (saveDraft && previousPreset === 'custom' && presetKey !== 'custom') {
+      saveCurrentRedCustomDraft();
+    }
+
+    presetInput.value = presetKey;
+    presetInput.dispatchEvent(new Event('change', { bubbles: true }));
+
+    if (presetKey === 'custom') {
+      const draft = selectedRed ? redCustomDrafts[selectedRed] : null;
+      if (draft) {
+        for (const param of RED_ATTACK_PRESET_FIELDS) {
+          if (draft[param] == null || draft[param] === '') continue;
+          setParamValue(param, draft[param]);
+        }
+      }
+      activateRedTab('red-strike');
+    } else {
+      applyResolvedRedAttackProfile(presetKey, { preserveMissiles });
+    }
+
+    updateRedAttackPresetUI();
+  }
+
   function handleCountryClick(e) {
     const item = e.target.closest('.wizard-country-item');
     if (!item) return;
 
     const side = item.dataset.side;
     const key  = item.dataset.key;
-
-    const setParamValue = (param, val) => {
-      const probRange = el.querySelector(`[data-prob-target="${param}"]`);
-      if (probRange) {
-        probRange.value = (parseFloat(val) * 100).toFixed(1);
-        probRange.dispatchEvent(new Event('input', { bubbles: true }));
-      }
-
-      const input = el.querySelector(`[data-param="${param}"]`);
-      if (!input) return;
-      if (input.type === 'range') {
-        const min = input.min !== '' ? parseFloat(input.min) : null;
-        const max = input.max !== '' ? parseFloat(input.max) : null;
-        const numericVal = parseFloat(val);
-        if (Number.isFinite(numericVal)) {
-          let nextNumeric = numericVal;
-          if (Number.isFinite(min)) nextNumeric = Math.max(min, nextNumeric);
-          if (Number.isFinite(max)) nextNumeric = Math.min(max, nextNumeric);
-          input.value = String(nextNumeric);
-        } else {
-          input.value = String(val);
-        }
-      } else {
-        input.value = String(val);
-      }
-      input.dispatchEvent(new Event('input', { bubbles: true }));
-      input.dispatchEvent(new Event('change', { bubbles: true }));
-    };
 
     const list = item.closest('.wizard-country-section');
     list.querySelectorAll(`.wizard-country-item[data-side="${side}"]`).forEach(i => {
@@ -255,51 +411,29 @@ export function renderWizard(container, transitionFn) {
     item.classList.add('selected', side);
 
     if (side === 'blue') {
+      if (selectedBlue && selectedBlue !== key && currentBlueDefensePreset() === 'custom') {
+        saveCurrentBlueCustomDraft();
+      }
       selectedBlue = key;
-      const blue = COUNTRIES.blue[key];
-      if (blue) {
-        const blueStepParams = Array.from(
-          new Set(
-            Array.from(
-              el.querySelectorAll('.step-params[data-step="blue"] [data-param]')
-            ).map((node) => node.dataset.param).filter(Boolean)
-          )
-        );
-
-        for (const param of blueStepParams) {
-          const presetValue = resolveBluePresetParamValue(blue, param);
-          const nextValue = presetValue ?? DEFAULTS[param];
-          if (nextValue === undefined || nextValue === null) continue;
-          setParamValue(param, nextValue);
-        }
-      }
+      setBlueDefensePreset(DEFAULT_BLUE_DEFENSE_PRESET, {
+        preserveEditable: false,
+        saveDraft: false,
+      });
     } else {
-      selectedRed = key;
-      const red = COUNTRIES.red[key];
-      if (red) {
-        const redStepParams = Array.from(
-          new Set(
-            Array.from(
-              el.querySelectorAll('.step-params[data-step="red"] [data-param]')
-            ).map((node) => node.dataset.param).filter(Boolean)
-          )
-        );
-        const redSummary = summarizeRedMissileClasses(red);
-
-        for (const param of redStepParams) {
-          let presetValue = resolveRedPresetParamValue(red, param, redSummary);
-          if (param === 'launchRegion') {
-            presetValue = presetValue && LAUNCH_REGION_PRESETS[presetValue] ? presetValue : 'default';
-          }
-          const nextValue = presetValue ?? DEFAULTS[param];
-          if (nextValue === undefined || nextValue === null) continue;
-          setParamValue(param, nextValue);
-        }
+      if (selectedRed && selectedRed !== key && currentRedAttackPreset() === 'custom') {
+        saveCurrentRedCustomDraft();
       }
+      selectedRed = key;
+      setRedAttackPreset(DEFAULT_RED_ATTACK_PRESET, {
+        preserveMissiles: false,
+        saveDraft: false,
+      });
     }
 
     const center = getCountryCenter(key);
     rotateToCountry(center);
+    updateBlueDefensePresetUI();
+    updateRedAttackPresetUI();
     updateStepDisplay();
   }
 
@@ -479,6 +613,38 @@ export function renderWizard(container, transitionFn) {
     doctrineModeInput.dispatchEvent(new Event('change', { bubbles: true }));
   });
 
+  const bluePresetInput = getParamInput('blueDefensePreset');
+  bluePresetInput?.addEventListener('change', updateBlueDefensePresetUI);
+  for (const param of BLUE_DEFENSE_CONTROLLED_FIELDS) {
+    const input = getParamInput(param);
+    input?.addEventListener('input', updateBlueDefensePresetUI);
+    input?.addEventListener('change', updateBlueDefensePresetUI);
+  }
+
+  el.addEventListener('click', (event) => {
+    const btn = event.target.closest('[data-blue-defense-preset]');
+    if (!btn || !el.contains(btn)) return;
+    const presetKey = btn.dataset.blueDefensePreset;
+    if (!presetKey || presetKey === currentBlueDefensePreset()) return;
+    setBlueDefensePreset(presetKey, { preserveEditable: true });
+  });
+
+  const redPresetInput = getParamInput('redAttackPreset');
+  redPresetInput?.addEventListener('change', updateRedAttackPresetUI);
+  for (const param of RED_ATTACK_PRESET_FIELDS) {
+    const input = getParamInput(param);
+    input?.addEventListener('input', updateRedAttackPresetUI);
+    input?.addEventListener('change', updateRedAttackPresetUI);
+  }
+
+  el.addEventListener('click', (event) => {
+    const btn = event.target.closest('[data-red-attack-preset]');
+    if (!btn || !el.contains(btn)) return;
+    const presetKey = btn.dataset.redAttackPreset;
+    if (!presetKey || presetKey === currentRedAttackPreset()) return;
+    setRedAttackPreset(presetKey, { preserveMissiles: true });
+  });
+
   // Internal tab switching (within Blue / Red steps)
   el.addEventListener('click', (event) => {
     const tab = event.target.closest('.wizard-tab[data-tab]');
@@ -534,5 +700,7 @@ export function renderWizard(container, transitionFn) {
     });
   });
 
+  updateBlueDefensePresetUI();
+  updateRedAttackPresetUI();
   updateStepDisplay();
 }

@@ -24,19 +24,16 @@ export const DEFAULTS = {
   nInventory: 44,
   nSpaceBoostKinetic: 0,
   pkSpaceBoostKinetic: 0.50,
+  blueDefensePreset: "baseline",
   launchRegion: "default",
   asatSensingPenalty: 0,
   asatAvailabilityPenalty: 0,
   boostEvasionPenalty: 0.0,
   midcourseInterceptionPenalty: 0,
+  redAttackPreset: "baseline",
   nTrials: 2000,
   seed: null,
 
-  // --- Multi-phase params (populated by presets or future UI) ---
-  // constellationAltitudeKm: 1000,
-  // regionalCoverageFactor: 1.0,
-  // pDecoyBurnup: 0.7,
-  // interceptors: { ... },    // per-type: { deployed, pk, costPerUnit_M, phase }
-  // missileClasses: { ... },  // per-class: { count, mirvsPerMissile, decoysPerWarhead, yieldKt, boostEvasion }
-  // countermeasures: { asatType },
+  // --- Derived metadata used outside the core trial logic ---
+  // interceptors: { ... },
 };

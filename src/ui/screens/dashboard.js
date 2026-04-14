@@ -23,9 +23,7 @@ function renderPhaseStrip() {
       <span class="phase-arrow">&rarr;</span>
       <span class="phase-node" data-phase="boost">Boost</span>
       <span class="phase-arrow">&rarr;</span>
-      <span class="phase-node" data-phase="mid">Mid</span>
-      <span class="phase-arrow">&rarr;</span>
-      <span class="phase-node" data-phase="term">Term</span>
+      <span class="phase-node" data-phase="mid">Midcourse</span>
     </div>
   `;
 }
@@ -172,29 +170,6 @@ function showResults(params, result, elapsed) {
 
   el.querySelector('#resultsOverlay').classList.add('open');
   el.querySelector('#btnResults').classList.add('has-data');
-}
-
-function animatePhases(callback) {
-  const phases = ['detect', 'boost', 'mid', 'term'];
-  const nodes = el.querySelectorAll('.phase-node');
-
-  // Reset all
-  nodes.forEach(n => {
-    n.classList.remove('active', 'complete');
-  });
-
-  let i = 0;
-  function step() {
-    if (i > 0) nodes[i - 1].classList.replace('active', 'complete');
-    if (i < phases.length) {
-      nodes[i].classList.add('active');
-      i++;
-      setTimeout(step, 200);
-    } else {
-      if (callback) callback();
-    }
-  }
-  step();
 }
 
 function handleRun() {

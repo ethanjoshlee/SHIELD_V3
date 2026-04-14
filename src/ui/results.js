@@ -5,6 +5,8 @@
 import { fmt } from '../utils/format.js';
 import { renderHistogramHTML } from './charts.js';
 import { LAUNCH_REGION_PRESETS } from '../config/launchRegions.js';
+import { getBlueDefensePresetMeta } from '../config/blueDefensePresets.js';
+import { getRedAttackPresetMeta } from '../config/redAttackPresets.js';
 import { DELIVERED_KILOTONS_BENCHMARKS } from './deliveredKilotonsBenchmarks.js';
 
 function resolveDeliveredStepSize(params) {
@@ -165,6 +167,10 @@ export function renderResultsContent(params, result) {
   const architectureCostB = s.architectureCost_B ?? ((s.architectureCost_M ?? 0) / 1000);
   const hasDistributionData = !!(result.penReal && result.penReal.length > 0);
   const defaultDistTitle = 'Delivered Kilotons';
+  const blueDefensePreset = params.blueDefensePreset ?? 'baseline';
+  const blueDefensePresetMeta = getBlueDefensePresetMeta(blueDefensePreset);
+  const redAttackPreset = params.redAttackPreset ?? 'baseline';
+  const redAttackPresetMeta = getRedAttackPresetMeta(redAttackPreset);
 
   return `
     <div class="results-content">
@@ -259,7 +265,27 @@ export function renderResultsContent(params, result) {
       <div class="wizard-tab-panel" data-tab-panel="results-inputs">
         <h3>Inputs</h3>
         <div class="results-grid">
-          <div class="results-input-group-label results-input-group-label--first">Strike Salvo</div>
+          <div class="results-input-group-label results-input-group-label--first">Defense Profile</div>
+          <div class="result-item">
+            <span class="label">Blue defense preset:</span>
+            <span class="value">${blueDefensePresetMeta.label}</span>
+          </div>
+          <div class="result-item">
+            <span class="label">Preset note:</span>
+            <span class="value">${blueDefensePreset === 'custom' ? 'All Blue sensing, interceptor-effectiveness, doctrine, and inventory assumptions were manually configured.' : 'Blue sensing and interceptor-effectiveness assumptions were preset-controlled, while interceptor inventories and doctrine remained user-adjustable.'}</span>
+          </div>
+
+          <div class="results-input-group-label">Attack Profile</div>
+          <div class="result-item">
+            <span class="label">Red attack preset:</span>
+            <span class="value">${redAttackPresetMeta.label}</span>
+          </div>
+          <div class="result-item">
+            <span class="label">Preset note:</span>
+            <span class="value">${redAttackPreset === 'custom' ? 'All Red strike, penetration-aid, and counterspace assumptions were manually configured.' : 'Qualitative Red assumptions were preset-controlled, with missile count left user-adjustable.'}</span>
+          </div>
+
+          <div class="results-input-group-label">Strike Salvo</div>
           <div class="result-item">
             <span class="label">Ballistic missiles:</span>
             <span class="value">${params.nMissiles}</span>
@@ -332,7 +358,7 @@ export function renderResultsContent(params, result) {
           </div>
           <div class="result-item">
             <span class="label">Detection note:</span>
-            <span class="value">Counterspace sensing degradation is applied to the boost and midcourse portions of the model. Ground-based midcourse interceptors remain in the model, but the removed terminal layer is no longer simulated.</span>
+            <span class="value">Counterspace sensing degradation is applied to both modeled engagement phases: boost and midcourse. Ground-based midcourse interceptors remain in the model.</span>
           </div>
 
           <div class="results-input-group-label">Ground-Based Midcourse Interceptors</div>
@@ -368,7 +394,7 @@ export function renderResultsContent(params, result) {
           </div>
           <div class="result-item">
             <span class="label">Space-layer note:</span>
-            <span class="value">The model now includes only the hypothetical boost-phase space layer. Hypothetical midcourse space interceptors and hypothetical terminal interceptors have been removed from the simulation.</span>
+            <span class="value">The modeled space layer is limited to hypothetical boost-phase interceptors.</span>
           </div>
 
           <div class="results-input-group-label">Model Computation</div>
