@@ -33,9 +33,9 @@ import { blueParamsHTML, redParamsHTML, simParamsHTML, readParamsFromUI } from '
 
 const STEPS = [
   { key: 'sides', title: '', subtitle: '', number: '01 / 04' },
-  { key: 'blue', title: 'Configure Blue', subtitle: 'Defense capabilities, doctrine, and preset assumptions', number: '02 / 04' },
-  { key: 'red',  title: 'Configure Red', subtitle: 'Attack capabilities, countermeasures, and preset assumptions', number: '03 / 04' },
-  { key: 'sim',  title: 'Model Computation', subtitle: 'Trial settings and model parameters', number: '04 / 04' },
+  { key: 'blue', title: 'CONFIGURE BLUE', subtitle: 'Defense presets and assumptions', number: '02 / 04' },
+  { key: 'red',  title: 'CONFIGURE RED', subtitle: 'Attack presets and assumptions', number: '03 / 04' },
+  { key: 'sim',  title: 'MODEL COMPUTATION', subtitle: 'Trial settings and model parameters', number: '04 / 04' },
 ];
 
 const DOCTRINE_GROUPS = [
@@ -77,6 +77,79 @@ function formatRedSummaryValue(param, rawValue) {
   }
 
   return Number.isInteger(value) ? String(value) : value.toFixed(1);
+}
+
+function setInlineTooltipBubblePlacement(bubble, horizontal, vertical) {
+  bubble.classList.toggle('wizard-inline-tooltip-bubble--start', horizontal === 'start');
+  bubble.classList.toggle('wizard-inline-tooltip-bubble--end', horizontal === 'end');
+  bubble.classList.toggle('wizard-inline-tooltip-bubble--above', vertical === 'above');
+}
+
+function measureInlineTooltipBubble(bubble) {
+  const previousDisplay = bubble.style.display;
+  const previousVisibility = bubble.style.visibility;
+  const previousOpacity = bubble.style.opacity;
+  const previousTransform = bubble.style.transform;
+
+  bubble.style.display = 'block';
+  bubble.style.visibility = 'hidden';
+  bubble.style.opacity = '0';
+  bubble.style.transform = 'none';
+
+  const rect = bubble.getBoundingClientRect();
+
+  bubble.style.display = previousDisplay;
+  bubble.style.visibility = previousVisibility;
+  bubble.style.opacity = previousOpacity;
+  bubble.style.transform = previousTransform;
+
+  return rect;
+}
+
+function positionInlineTooltip(tooltipEl) {
+  const bubble = tooltipEl?.querySelector('.wizard-inline-tooltip-bubble');
+  if (!bubble) return;
+
+  const boundary =
+    tooltipEl.closest('.wizard-params-container') ??
+    tooltipEl.closest('.wizard-left') ??
+    document.documentElement;
+  const boundaryRect = boundary.getBoundingClientRect();
+  const padding = 12;
+  const defaultHorizontal = tooltipEl.dataset.tooltipPlacement === 'end' ? 'end' : 'start';
+  const horizontalOptions = defaultHorizontal === 'end' ? ['end', 'start'] : ['start', 'end'];
+  const verticalOptions = ['below', 'above'];
+  const maxWidth = Math.max(180, Math.floor(boundaryRect.width - padding * 2));
+  bubble.style.maxWidth = `${maxWidth}px`;
+
+  let bestPlacement = {
+    horizontal: defaultHorizontal,
+    vertical: 'below',
+    overflow: Number.POSITIVE_INFINITY,
+  };
+
+  outer: for (const vertical of verticalOptions) {
+    for (const horizontal of horizontalOptions) {
+      setInlineTooltipBubblePlacement(bubble, horizontal, vertical);
+      const rect = measureInlineTooltipBubble(bubble);
+      const overflowLeft = Math.max(0, boundaryRect.left + padding - rect.left);
+      const overflowRight = Math.max(0, rect.right - (boundaryRect.right - padding));
+      const overflowTop = Math.max(0, boundaryRect.top + padding - rect.top);
+      const overflowBottom = Math.max(0, rect.bottom - (boundaryRect.bottom - padding));
+      const overflow = overflowLeft + overflowRight + overflowTop + overflowBottom;
+
+      if (overflow < bestPlacement.overflow) {
+        bestPlacement = { horizontal, vertical, overflow };
+      }
+
+      if (overflow === 0) {
+        bestPlacement = { horizontal, vertical, overflow };
+        break outer;
+      }
+    }
+  }
+
+  setInlineTooltipBubblePlacement(bubble, bestPlacement.horizontal, bestPlacement.vertical);
 }
 
 export function renderWizard(container, transitionFn) {
@@ -121,6 +194,18 @@ export function renderWizard(container, transitionFn) {
       tab.classList.toggle('active', tab.dataset.tab === tabId);
     });
     redRoot.querySelectorAll('.wizard-tab-panel').forEach((panel) => {
+      panel.classList.toggle('active', panel.dataset.tabPanel === tabId);
+    });
+  }
+
+  function activateBlueTab(tabId) {
+    const blueRoot = el?.querySelector('[data-blue-defense-root]');
+    if (!blueRoot) return;
+
+    blueRoot.querySelectorAll('.blue-custom-tabs .wizard-tab').forEach((tab) => {
+      tab.classList.toggle('active', tab.dataset.tab === tabId);
+    });
+    blueRoot.querySelectorAll('.wizard-tab-panel').forEach((panel) => {
       panel.classList.toggle('active', panel.dataset.tabPanel === tabId);
     });
   }
@@ -259,7 +344,15 @@ export function renderWizard(container, transitionFn) {
 
     const presetKey = currentBlueDefensePreset();
     const isCustom = presetKey === 'custom';
+    const previousMode = blueRoot.dataset.blueDefenseMode;
+    const activeTabId = blueRoot.querySelector('.blue-custom-tabs .wizard-tab.active')?.dataset.tab;
     blueRoot.dataset.blueDefenseMode = isCustom ? 'custom' : 'preset';
+
+    if (isCustom && previousMode !== 'custom') {
+      activateBlueTab('blue-sensing');
+    } else if (!isCustom && activeTabId !== 'blue-gbi' && activeTabId !== 'blue-space') {
+      activateBlueTab('blue-space');
+    }
 
     blueRoot.querySelectorAll('[data-blue-defense-preset]').forEach((btn) => {
       const selected = btn.dataset.blueDefensePreset === presetKey;
@@ -496,6 +589,25 @@ export function renderWizard(container, transitionFn) {
 
   container.appendChild(el);
   requestAnimationFrame(() => el.classList.add('active'));
+
+  el.addEventListener('mouseover', (event) => {
+    const tooltip = event.target.closest('.wizard-inline-tooltip');
+    if (!tooltip || !el.contains(tooltip)) return;
+
+    const previousTooltip =
+      event.relatedTarget instanceof Element
+        ? event.relatedTarget.closest('.wizard-inline-tooltip')
+        : null;
+    if (previousTooltip === tooltip) return;
+
+    positionInlineTooltip(tooltip);
+  });
+
+  el.addEventListener('focusin', (event) => {
+    const tooltip = event.target.closest('.wizard-inline-tooltip');
+    if (!tooltip || !el.contains(tooltip)) return;
+    positionInlineTooltip(tooltip);
+  });
 
   // Wire sliders — bidirectional sync between range + numeric input, with blur-time normalization.
   const stepPrecision = (step) => {

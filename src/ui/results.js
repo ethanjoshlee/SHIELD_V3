@@ -8,6 +8,7 @@ import { LAUNCH_REGION_PRESETS } from '../config/launchRegions.js';
 import { getBlueDefensePresetMeta } from '../config/blueDefensePresets.js';
 import { getRedAttackPresetMeta } from '../config/redAttackPresets.js';
 import { DELIVERED_KILOTONS_BENCHMARKS } from './deliveredKilotonsBenchmarks.js';
+import { COST_MODEL_REFERENCE, COST_MODEL_UI } from '../model/costModel.js';
 
 function resolveDeliveredStepSize(params) {
   const raw = Number(params?.kilotonsPerWarhead);
@@ -68,6 +69,17 @@ function formatDoctrineLine(mode, shots, maxShots) {
   return mode === 'barrage'
     ? `Barrage, ${shots} shots per detected/tracked target (committed salvo)`
     : `SLS, max ${maxShots} shots per detected/tracked target`;
+}
+
+function formatCount(value) {
+  return Math.round(Number(value) || 0).toLocaleString('en-US');
+}
+
+function formatCostMagnitude(valueB) {
+  if (!Number.isFinite(valueB)) return '$0.0B';
+  const absValueB = Math.abs(valueB);
+  if (absValueB >= 1000) return `$${fmt(valueB / 1000, 2)}T`;
+  return `$${fmt(valueB, 1)}B`;
 }
 
 function initResultsTabStrip(rootEl) {
@@ -144,7 +156,7 @@ export function renderResultsContent(params, result) {
 
   const midcourseKineticDoctrineMode = params.midcourseKineticDoctrineMode ?? params.doctrineMode ?? 'barrage';
   const midcourseKineticShotsPerTarget = params.midcourseKineticShotsPerTarget ?? params.shotsPerTarget ?? 2;
-  const midcourseKineticMaxShotsPerTarget = params.midcourseKineticMaxShotsPerTarget ?? params.maxShotsPerTarget ?? 4;
+  const midcourseKineticMaxShotsPerTarget = params.midcourseKineticMaxShotsPerTarget ?? params.maxShotsPerTarget ?? 2;
   const midcourseDoctrineLine = formatDoctrineLine(
     midcourseKineticDoctrineMode,
     midcourseKineticShotsPerTarget,
@@ -164,13 +176,29 @@ export function renderResultsContent(params, result) {
   const p10DeliveredKilotons = s.p10DeliveredKilotons ?? s.p10KtDelivered ?? 0;
   const medianDeliveredKilotons = s.medianDeliveredKilotons ?? s.medianKtDelivered ?? 0;
   const p90DeliveredKilotons = s.p90DeliveredKilotons ?? s.p90KtDelivered ?? 0;
-  const architectureCostB = s.architectureCost_B ?? ((s.architectureCost_M ?? 0) / 1000);
   const hasDistributionData = !!(result.penReal && result.penReal.length > 0);
   const defaultDistTitle = 'Delivered Kilotons';
   const blueDefensePreset = params.blueDefensePreset ?? 'baseline';
   const blueDefensePresetMeta = getBlueDefensePresetMeta(blueDefensePreset);
   const redAttackPreset = params.redAttackPreset ?? 'baseline';
   const redAttackPresetMeta = getRedAttackPresetMeta(redAttackPreset);
+  const costFramingLabel = s.costFramingLabel ?? COST_MODEL_UI.framingLabel;
+  const costModelNotes = Array.isArray(s.costModelNotes) ? s.costModelNotes : [];
+  const spaceBoostLayerCostB = s.spaceBoostLayerCost_B ?? 0;
+  const spaceBoostDevelopmentCostB = s.spaceBoostDevelopmentCost_B ?? 0;
+  const spaceBoostInitialProcurementLaunchCostB = s.spaceBoostInitialProcurementLaunchCost_B ?? 0;
+  const spaceBoostReplenishmentCostB = s.spaceBoostReplenishmentCost_B ?? 0;
+  const spaceBoostOperationsCostB = s.spaceBoostOperationsCost_B ?? 0;
+  const spaceBoostRequestedCount = s.spaceBoostRequestedCount ?? 0;
+  const spaceBoostCostedCount = s.spaceBoostCostedCount ?? 0;
+  const spaceBoostCostWasCapped = !!s.spaceBoostCostWasCapped;
+  const sensingC2SupportCostB = s.sensingC2SupportCost_B ?? 0;
+  const supportBundleScale = s.supportBundleScale ?? 0;
+  const supportBundleBaseCostB = s.supportBundleBaseCost_B ?? 0;
+  const groundBasedInterceptorLayerCostB = s.groundBasedInterceptorLayerCost_B ?? 0;
+  const groundBattalionEquivalent = s.groundBattalionEquivalent ?? 0;
+  const groundBattalion20YearCostB = s.groundBattalion20YearCost_B ?? 0;
+  const totalArchitectureEquivalentCostB = s.totalArchitectureEquivalentCost_B ?? 0;
 
   return `
     <div class="results-content">
@@ -253,13 +281,109 @@ export function renderResultsContent(params, result) {
       </div>
 
       <div class="wizard-tab-panel" data-tab-panel="results-costs">
-        <h3>Architecture Cost</h3>
-        <div class="results-grid">
+        <h3>${COST_MODEL_UI.heading}</h3>
+
+        <div class="cost-framing-card">
+          <div class="cost-framing-title">${costFramingLabel}</div>
+          ${costModelNotes.length > 0 ? `
+            <div class="cost-framing-notes">
+              ${costModelNotes.map((note) => `<div>${note}</div>`).join('')}
+            </div>
+          ` : ''}
+        </div>
+
+        <div class="results-grid results-grid--single">
           <div class="result-item">
-            <span class="label">Estimated interceptor architecture cost:</span>
-            <span class="value">$${fmt(architectureCostB, 1)}B</span>
+            <span class="label">Estimated space-based interceptor layer cost:</span>
+            <span class="value">${formatCostMagnitude(spaceBoostLayerCostB)}</span>
+          </div>
+          <div class="result-item">
+            <span class="label">Estimated sensing / C2 support cost:</span>
+            <span class="value">${formatCostMagnitude(sensingC2SupportCostB)}</span>
+          </div>
+          <div class="result-item">
+            <span class="label">Estimated ground-based interceptor layer cost:</span>
+            <span class="value">${formatCostMagnitude(groundBasedInterceptorLayerCostB)}</span>
+          </div>
+          <div class="result-item highlight result-item--cost-total">
+            <span class="label">Estimated total 20-year architecture-equivalent cost:</span>
+            <span class="value">${formatCostMagnitude(totalArchitectureEquivalentCostB)}</span>
           </div>
         </div>
+
+        <details class="cost-methodology-disclosure">
+          <summary class="cost-methodology-toggle">
+            <div class="cost-methodology-head">
+              <span class="cost-methodology-title">Methodology and assumptions</span>
+              <span class="cost-methodology-subtitle">Modeled layers, equations, AEI anchors, and deferred scope</span>
+            </div>
+          </summary>
+
+          <div class="cost-methodology">
+            <div class="cost-methodology-grid">
+              <div class="cost-methodology-block">
+                <div class="cost-methodology-block-title">Modeled SHIELD_V3 Drivers</div>
+                <div class="cost-methodology-note">Hypothetical space-based boost interceptors in orbit: ${formatCount(params.nSpaceBoostKinetic)}</div>
+                <div class="cost-methodology-note">Existing ground-based midcourse interceptors in range: ${formatCount(params.nInventory)}</div>
+              </div>
+
+              <div class="cost-methodology-block">
+                <div class="cost-methodology-block-title">Space-Based Boost Layer</div>
+                ${spaceBoostRequestedCount > 0 ? `
+                  <div class="cost-methodology-equation">
+                    Space layer = ${formatCostMagnitude(spaceBoostDevelopmentCostB)} development + ${formatCostMagnitude(spaceBoostInitialProcurementLaunchCostB)} procurement/launch + ${formatCostMagnitude(spaceBoostReplenishmentCostB)} replenishment + ${formatCostMagnitude(spaceBoostOperationsCostB)} 20-year O&amp;S = ${formatCostMagnitude(spaceBoostLayerCostB)}
+                  </div>
+                  <div class="cost-methodology-note">
+                    Piecewise-linear interpolation across AEI boost-phase anchor counts (${formatCount(COST_MODEL_REFERENCE.boostBasicAnchorCount)}, ${formatCount(COST_MODEL_REFERENCE.boostModerateAnchorCount)}, ${formatCount(COST_MODEL_REFERENCE.boostRobustAnchorCount)}).
+                  </div>
+                  ${spaceBoostCostWasCapped ? `
+                    <div class="cost-methodology-note">
+                      Requested ${formatCount(spaceBoostRequestedCount)} interceptors; costing capped at AEI's robust anchor of ${formatCount(COST_MODEL_REFERENCE.boostRobustAnchorCount)} for this first pass.
+                    </div>
+                  ` : `
+                    <div class="cost-methodology-note">
+                      Costing count used: ${formatCount(spaceBoostCostedCount)} interceptors.
+                    </div>
+                  `}
+                ` : `
+                  <div class="cost-methodology-note">
+                    No modeled space-based boost interceptors were selected, so this layer is costed at ${formatCostMagnitude(spaceBoostLayerCostB)}.
+                  </div>
+                `}
+              </div>
+
+              <div class="cost-methodology-block">
+                <div class="cost-methodology-block-title">Ground-Based Interceptor Layer</div>
+                <div class="cost-methodology-equation">
+                  Ground layer = (${fmt(groundBattalionEquivalent, 2)} battalion-equivalents) × ${formatCostMagnitude(groundBattalion20YearCostB)} per battalion = ${formatCostMagnitude(groundBasedInterceptorLayerCostB)}
+                </div>
+                <div class="cost-methodology-note">
+                  Battalion-equivalents = ${formatCount(params.nInventory)} / ${COST_MODEL_REFERENCE.groundInterceptorsPerBattalion} interceptors per battalion.
+                </div>
+              </div>
+
+              <div class="cost-methodology-block">
+                <div class="cost-methodology-block-title">Sensing / C2 Support Bundle</div>
+                <div class="cost-methodology-equation">
+                  Support bundle = ${fmt(supportBundleScale, 2)} architecture scale × ${formatCostMagnitude(supportBundleBaseCostB)} base bundle = ${formatCostMagnitude(sensingC2SupportCostB)}
+                </div>
+                <div class="cost-methodology-note">
+                  Scale = max(space boost interceptors / ${formatCount(COST_MODEL_REFERENCE.boostBasicAnchorCount)}, ground interceptors / ${COST_MODEL_REFERENCE.groundInterceptorsPerBattalion}).
+                </div>
+                <div class="cost-methodology-note">
+                  Base bundle is assembled from AEI-inspired tracking-satellite, C2BMC, pLEO SATCOM, and command-center component costs.
+                </div>
+              </div>
+
+              <div class="cost-methodology-block">
+                <div class="cost-methodology-block-title">Deferred Scope</div>
+                <div class="cost-deferred-list">
+                  ${COST_MODEL_UI.deferredScope.map((note) => `<div class="cost-methodology-note">${note}</div>`).join('')}
+                </div>
+              </div>
+            </div>
+          </div>
+        </details>
       </div>
 
       <div class="wizard-tab-panel" data-tab-panel="results-inputs">
@@ -327,11 +451,11 @@ export function renderResultsContent(params, result) {
 
           <div class="results-input-group-label">Counterspace Attack</div>
           <div class="result-item">
-            <span class="label">Space-layer sensing and cueing degradation:</span>
+            <span class="label">Degradation of Blue’s sensing and tracking:</span>
             <span class="value">${fmt(asatSensingPenalty, 2)}</span>
           </div>
           <div class="result-item">
-            <span class="label">Space-based interceptor availability degradation:</span>
+            <span class="label">Degradation of space-based boost interceptor availability:</span>
             <span class="value">${fmt(asatAvailabilityPenalty, 2)}</span>
           </div>
 

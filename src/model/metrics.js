@@ -3,6 +3,7 @@
  */
 
 import { mean, percentile } from '../utils/rng.js';
+import { computeIllustrativeArchitectureEquivalentCost } from './costModel.js';
 
 /**
  * Compute the total architecture cost (deterministic, not per-trial).
@@ -87,6 +88,9 @@ export function computeSummary(arrays, realWarheadsConst, params = {}) {
   // Architecture cost
   summary.architectureCost_M = computeArchitectureCost(params);
   summary.architectureCost_B = summary.architectureCost_M / 1000;
+
+  // SHIELD_V3 illustrative 20-year architecture-equivalent cost context.
+  Object.assign(summary, computeIllustrativeArchitectureEquivalentCost(params));
 
   return summary;
 }

@@ -58,7 +58,7 @@ export const BLUE_DEFENSE_PRESETS = {
       nInventory: 44,
       midcourseKineticDoctrineMode: 'sls',
       midcourseKineticShotsPerTarget: 2,
-      midcourseKineticMaxShotsPerTarget: 4,
+      midcourseKineticMaxShotsPerTarget: 2,
       nSpaceBoostKinetic: 0,
       boostKineticShotsPerTarget: 2,
     },
@@ -90,7 +90,7 @@ export const BLUE_DEFENSE_PRESETS = {
       nInventory: 44,
       midcourseKineticDoctrineMode: 'barrage',
       midcourseKineticShotsPerTarget: 2,
-      midcourseKineticMaxShotsPerTarget: 4,
+      midcourseKineticMaxShotsPerTarget: 2,
       nSpaceBoostKinetic: 0,
       boostKineticShotsPerTarget: 2,
     },
@@ -142,7 +142,7 @@ export function resolveBlueDefenseProfile(countryKey, presetKey = DEFAULT_BLUE_D
   const preset = getBlueDefensePreset(countryKey, presetKey) ?? {};
   const midcourseDoctrineMode = defaults.midcourseKineticDoctrineMode ?? defaults.doctrineMode ?? 'barrage';
   const midcourseShotsPerTarget = defaults.midcourseKineticShotsPerTarget ?? defaults.shotsPerTarget ?? 2;
-  const midcourseMaxShotsPerTarget = defaults.midcourseKineticMaxShotsPerTarget ?? defaults.maxShotsPerTarget ?? 4;
+  const midcourseMaxShotsPerTarget = defaults.midcourseKineticMaxShotsPerTarget ?? defaults.maxShotsPerTarget ?? 2;
 
   return {
     ...defaults,

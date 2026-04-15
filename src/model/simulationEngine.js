@@ -23,7 +23,7 @@ function doctrineParamsFrom(params) {
   return {
     doctrineMode: params.doctrineMode === 'sls' ? 'sls' : 'barrage',
     shotsPerTarget: Math.max(0, Math.floor(Number(params.shotsPerTarget) || 0)),
-    maxShotsPerTarget: Math.max(0, Math.floor(Number(params.maxShotsPerTarget) || 0)),
+    maxShotsPerTarget: Math.max(1, Math.min(4, Math.floor(Number(params.maxShotsPerTarget) || 0))),
     pReengage: 0,
   };
 }
@@ -40,7 +40,7 @@ function midcourseKineticDoctrineParamsFrom(params) {
   return {
     doctrineMode,
     shotsPerTarget: Math.max(0, Math.floor(Number(shotsRaw ?? fallback.shotsPerTarget) || 0)),
-    maxShotsPerTarget: Math.max(0, Math.floor(Number(maxShotsRaw ?? fallback.maxShotsPerTarget) || 0)),
+    maxShotsPerTarget: Math.max(1, Math.min(4, Math.floor(Number(maxShotsRaw ?? fallback.maxShotsPerTarget) || 0))),
     // In the simplified model, SLS midcourse engagements always re-engage
     // while inventory remains, so this is fixed rather than user-controlled.
     pReengage: 1,
