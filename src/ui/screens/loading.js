@@ -1,7 +1,5 @@
 /**
- * Loading screens — two distinct variants:
- *   renderRunLoading  — simulation executing (Run button)
- *   renderResetLoading — scenario clearing (Reset button)
+ * Loading screen shown while the Monte Carlo run executes.
  */
 
 /**
@@ -64,33 +62,4 @@ export function renderRunLoading(container, nTrials, onComplete) {
       if (onComplete) onComplete();
     }, 300);
   }, totalDuration + 200);
-}
-
-/**
- * Reset loading: lightweight full-screen clear message, no progress bar.
- * @param {HTMLElement} container
- * @param {Function} onComplete
- */
-export function renderResetLoading(container, onComplete) {
-  const el = document.createElement('div');
-  el.className = 'screen-loading screen-loading-reset';
-  el.innerHTML = `
-    <div class="dot-grid"></div>
-    <div class="reset-status">
-      <div class="reset-primary">CONFIGURATION CLEARED</div>
-      <div class="reset-secondary">returning to selection</div>
-    </div>
-  `;
-  container.appendChild(el);
-
-  requestAnimationFrame(() => el.classList.add('active'));
-
-  // Hold briefly then fade out
-  setTimeout(() => {
-    el.classList.remove('active');
-    setTimeout(() => {
-      el.remove();
-      if (onComplete) onComplete();
-    }, 250);
-  }, 650);
 }

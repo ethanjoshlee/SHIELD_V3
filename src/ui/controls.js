@@ -3,29 +3,26 @@
  */
 
 import { clamp01 } from '../utils/rng.js';
-import { LAUNCH_REGION_ORDER, LAUNCH_REGION_PRESETS } from '../config/launchRegions.js';
 import {
-  BLUE_DEFENSE_PRESET_META,
-  BLUE_DEFENSE_PRESET_ORDER,
-  DEFAULT_BLUE_DEFENSE_PRESET,
-  getBlueDefensePresetMeta,
+  BLUE_QUANTITATIVE_PRESET_ORDER,
+  BLUE_QUANTITATIVE_PRESET_META,
+  BLUE_QUALITATIVE_PRESET_ORDER,
+  BLUE_QUALITATIVE_PRESET_META,
+  DEFAULT_BLUE_QUANTITATIVE_PRESET,
+  DEFAULT_BLUE_QUALITATIVE_PRESET,
+  getBlueDefenseProfileMeta,
   resolveBlueDefenseProfile,
 } from '../config/blueDefensePresets.js';
 import {
-  DEFAULT_RED_ATTACK_PRESET,
-  RED_ATTACK_PRESET_ORDER,
-  RED_ATTACK_PRESET_META,
-  getRedAttackPresetMeta,
+  DEFAULT_RED_QUANTITATIVE_PRESET,
+  DEFAULT_RED_QUALITATIVE_PRESET,
+  RED_QUANTITATIVE_PRESET_ORDER,
+  RED_QUANTITATIVE_PRESET_META,
+  RED_QUALITATIVE_PRESET_ORDER,
+  RED_QUALITATIVE_PRESET_META,
+  getRedAttackProfileMeta,
   resolveRedAttackProfile,
 } from '../config/redAttackPresets.js';
-
-function launchRegionOptionsHTML(selected) {
-  return LAUNCH_REGION_ORDER.map((key) => {
-    const label = LAUNCH_REGION_PRESETS[key]?.label ?? key;
-    const isSelected = key === selected ? 'selected' : '';
-    return `<option value="${key}" ${isSelected}>${label}</option>`;
-  }).join('');
-}
 
 function escapeHTML(value) {
   return String(value)
@@ -55,7 +52,20 @@ function labelWithTooltipHTML(label, tone, tooltipText, placement = 'start') {
   `;
 }
 
-const PLACEHOLDER_TOOLTIP_TEXT = 'placeholder';
+const PLACEHOLDER_TOOLTIP_TEXT =
+  'Placeholder: methodology notes for this control will be added in a later pass.';
+
+const BLUE_QUANTITATIVE_PRESET_TOOLTIP_TEXT =
+  'Placeholder: Blue quantitative presets bundle the modeled interceptor inventories and space-based boost interceptor counts.';
+
+const BLUE_QUALITATIVE_PRESET_TOOLTIP_TEXT =
+  'Placeholder: Blue qualitative presets bundle sensing, doctrine, and interceptor-effectiveness assumptions.';
+
+const RED_QUANTITATIVE_PRESET_TOOLTIP_TEXT =
+  'Placeholder: Red quantitative presets bundle strike size and warheads-per-missile assumptions.';
+
+const RED_QUALITATIVE_PRESET_TOOLTIP_TEXT =
+  'Placeholder: Red qualitative presets bundle warhead-yield and decoy assumptions.';
 
 function controlLabelHTML(label, tone = null, tooltipText = PLACEHOLDER_TOOLTIP_TEXT) {
   if (!tone) {
@@ -77,25 +87,51 @@ export function readParamsFromUI(blueKey, redKey, root = document) {
     if (!el) el = root.querySelector(`[data-param="${param}"]`);
     return el?.value || defaultVal;
   };
-  const hasBluePresetControl = !!root.querySelector('[data-param="blueDefensePreset"]');
-  const hasRedPresetControl = !!root.querySelector('[data-param="redAttackPreset"]');
+  const hasBluePresetControl = !!root.querySelector('[data-param="bluePresetMode"]');
+  const hasRedPresetControl = !!root.querySelector('[data-param="redPresetMode"]');
 
-  const blueDefensePreset = getValue(
-    "blueDefensePreset",
-    "blueDefensePreset",
-    hasBluePresetControl ? DEFAULT_BLUE_DEFENSE_PRESET : "custom"
+  const bluePresetMode = getValue(
+    "bluePresetMode",
+    "bluePresetMode",
+    hasBluePresetControl ? "preset" : "custom"
+  );
+  const blueQuantitativePreset = getValue(
+    "blueQuantitativePreset",
+    "blueQuantitativePreset",
+    DEFAULT_BLUE_QUANTITATIVE_PRESET
+  );
+  const blueQualitativePreset = getValue(
+    "blueQualitativePreset",
+    "blueQualitativePreset",
+    DEFAULT_BLUE_QUALITATIVE_PRESET
   );
   const resolvedBlueProfile = blueKey
-    ? resolveBlueDefenseProfile(blueKey, blueDefensePreset)
+    ? resolveBlueDefenseProfile(blueKey, {
+        quantitativePresetKey: blueQuantitativePreset,
+        qualitativePresetKey: blueQualitativePreset,
+      })
     : null;
 
-  const redAttackPreset = getValue(
-    "redAttackPreset",
-    "redAttackPreset",
-    hasRedPresetControl ? DEFAULT_RED_ATTACK_PRESET : "custom"
+  const redPresetMode = getValue(
+    "redPresetMode",
+    "redPresetMode",
+    hasRedPresetControl ? "preset" : "custom"
+  );
+  const redQuantitativePreset = getValue(
+    "redQuantitativePreset",
+    "redQuantitativePreset",
+    DEFAULT_RED_QUANTITATIVE_PRESET
+  );
+  const redQualitativePreset = getValue(
+    "redQualitativePreset",
+    "redQualitativePreset",
+    DEFAULT_RED_QUALITATIVE_PRESET
   );
   const resolvedRedProfile = redKey
-    ? resolveRedAttackProfile(redKey, redAttackPreset)
+    ? resolveRedAttackProfile(redKey, {
+        quantitativePresetKey: redQuantitativePreset,
+        qualitativePresetKey: redQualitativePreset,
+      })
     : null;
 
   const nMissiles = Math.max(
@@ -232,7 +268,7 @@ export function readParamsFromUI(blueKey, redKey, root = document) {
   const nSpaceBoostKinetic = Math.max(
     0,
     Math.min(
-      10000,
+      42000,
       parseInt(
         getValue(
           "nSpaceBoostKinetic",
@@ -253,46 +289,10 @@ export function readParamsFromUI(blueKey, redKey, root = document) {
     ) || 0
   );
 
-  const launchRegion = getValue(
-    "launchRegion",
-    "launchRegion",
-    resolvedRedProfile?.launchRegion ?? "default"
-  );
-  const asatSensingPenalty = clamp01(
-    parseFloat(
-      getValue(
-        "asatSensingPenalty",
-        "asatSensingPenalty",
-        resolvedRedProfile?.asatSensingPenalty ?? 0
-      )
-    ) || 0
-  );
-  const asatAvailabilityPenalty = clamp01(
-    parseFloat(
-      getValue(
-        "asatAvailabilityPenalty",
-        "asatAvailabilityPenalty",
-        resolvedRedProfile?.asatAvailabilityPenalty ?? 0
-      )
-    ) || 0
-  );
-  const boostEvasionPenalty = clamp01(
-    parseFloat(
-      getValue(
-        "boostEvasionPenalty",
-        "boostEvasionPenalty",
-        resolvedRedProfile?.boostEvasionPenalty ?? 0
-      )
-    ) || 0
-  );
-  const midcourseInterceptionPenalty = clamp01(
-    parseFloat(
-      getValue(
-        "midcourseInterceptionPenalty",
-        "midcourseInterceptionPenalty",
-        resolvedRedProfile?.midcourseInterceptionPenalty ?? 0
-      )
-    ) || 0
+  const launchSiteKey = getValue(
+    "launchSiteKey",
+    "launchSiteKey",
+    resolvedRedProfile?.launchSiteKey ?? ""
   );
 
   const nTrials = Math.max(1, parseInt(getValue("nTrials", "nTrials", 1000), 10) || 1000);
@@ -338,17 +338,17 @@ export function readParamsFromUI(blueKey, redKey, root = document) {
     nInventory,
     nSpaceBoostKinetic,
     pkSpaceBoostKinetic,
-    launchRegion,
-    asatSensingPenalty,
-    asatAvailabilityPenalty,
-    boostEvasionPenalty,
-    midcourseInterceptionPenalty,
+    launchSiteKey,
     nTrials,
     seed,
     blueKey,
-    blueDefensePreset,
+    bluePresetMode,
+    blueQuantitativePreset,
+    blueQualitativePreset,
     redKey,
-    redAttackPreset,
+    redPresetMode,
+    redQuantitativePreset,
+    redQualitativePreset,
     interceptors,
   };
 }
@@ -417,15 +417,15 @@ function intSlider(label, param, min, max, step, defaultVal, tone = null, toolti
  * BLUE step parameters (defender capabilities + engagement doctrine).
  * 2-column layout for paired controls.
  */
-function bluePresetToggleButtonsHTML(selectedPreset) {
-  return BLUE_DEFENSE_PRESET_ORDER.map((presetKey) => {
-    const meta = BLUE_DEFENSE_PRESET_META[presetKey];
+function buildPresetToggleButtonsHTML(order, metaByKey, selectedPreset, dataAttribute, toneClass) {
+  return order.map((presetKey) => {
+    const meta = metaByKey[presetKey];
     const isSelected = presetKey === selectedPreset;
     return `
       <button
         type="button"
-        class="wizard-toggle-item blue-preset-toggle-item ${isSelected ? 'selected' : ''}"
-        data-blue-defense-preset="${presetKey}"
+        class="wizard-toggle-item ${toneClass} ${isSelected ? 'selected' : ''}"
+        ${dataAttribute}="${presetKey}"
         aria-pressed="${isSelected ? 'true' : 'false'}"
       >
         ${meta.label}
@@ -444,8 +444,14 @@ function blueSummaryItemHTML(label, key) {
 }
 
 export function blueParamsHTML(d) {
-  const blueDefensePreset = d.blueDefensePreset ?? DEFAULT_BLUE_DEFENSE_PRESET;
-  const presetMeta = getBlueDefensePresetMeta(blueDefensePreset);
+  const bluePresetMode = d.bluePresetMode ?? 'preset';
+  const blueQuantitativePreset = d.blueQuantitativePreset ?? DEFAULT_BLUE_QUANTITATIVE_PRESET;
+  const blueQualitativePreset = d.blueQualitativePreset ?? DEFAULT_BLUE_QUALITATIVE_PRESET;
+  const profileMeta = getBlueDefenseProfileMeta(
+    blueQuantitativePreset,
+    blueQualitativePreset,
+    bluePresetMode
+  );
   const midcourseDoctrineMode = d.midcourseKineticDoctrineMode ?? d.doctrineMode ?? 'barrage';
   const midcourseShotsPerTarget = d.midcourseKineticShotsPerTarget ?? d.shotsPerTarget ?? 2;
   const midcourseMaxShotsPerTarget = d.midcourseKineticMaxShotsPerTarget ?? d.maxShotsPerTarget ?? 2;
@@ -484,19 +490,61 @@ export function blueParamsHTML(d) {
       </div>
   `;
   return `
-    <div class="blue-defense-root" data-blue-defense-root data-blue-defense-mode="${blueDefensePreset === 'custom' ? 'custom' : 'preset'}">
-      <div class="wizard-slider-row blue-preset-selector">
-        <div class="wizard-slider-header">
-          ${labelWithTooltipHTML(
-            'Defense preset',
-            'blue',
-            'Preset mode keeps Blue sensing and interceptor-effectiveness assumptions fixed while leaving interceptor inventories and doctrine editable. Switch to Custom to unlock all Blue inputs.'
-          )}
+    <div class="blue-defense-root" data-blue-defense-root data-blue-defense-mode="${bluePresetMode}">
+      <div class="preset-selector-layout blue-preset-selector">
+        <div class="preset-selector-rows">
+          <div class="wizard-slider-row preset-selector-row">
+            <div class="wizard-slider-header">
+              ${labelWithTooltipHTML(
+                'Quantitative presets',
+                'blue',
+                BLUE_QUANTITATIVE_PRESET_TOOLTIP_TEXT
+              )}
+            </div>
+            <div class="wizard-toggle-group blue-preset-toggle-group" role="radiogroup" aria-label="Blue quantitative presets">
+              ${buildPresetToggleButtonsHTML(
+                BLUE_QUANTITATIVE_PRESET_ORDER,
+                BLUE_QUANTITATIVE_PRESET_META,
+                blueQuantitativePreset,
+                'data-blue-quantitative-preset',
+                'blue-preset-toggle-item'
+              )}
+            </div>
+            <input type="hidden" class="wizard-hidden-param" data-param="blueQuantitativePreset" value="${blueQuantitativePreset}" />
+          </div>
+
+          <div class="wizard-slider-row preset-selector-row">
+            <div class="wizard-slider-header">
+              ${labelWithTooltipHTML(
+                'Qualitative presets',
+                'blue',
+                BLUE_QUALITATIVE_PRESET_TOOLTIP_TEXT
+              )}
+            </div>
+            <div class="wizard-toggle-group blue-preset-toggle-group" role="radiogroup" aria-label="Blue qualitative presets">
+              ${buildPresetToggleButtonsHTML(
+                BLUE_QUALITATIVE_PRESET_ORDER,
+                BLUE_QUALITATIVE_PRESET_META,
+                blueQualitativePreset,
+                'data-blue-qualitative-preset',
+                'blue-preset-toggle-item'
+              )}
+            </div>
+            <input type="hidden" class="wizard-hidden-param" data-param="blueQualitativePreset" value="${blueQualitativePreset}" />
+          </div>
         </div>
-        <div class="wizard-toggle-group blue-preset-toggle-group" role="radiogroup" aria-label="Blue defense preset">
-          ${bluePresetToggleButtonsHTML(blueDefensePreset)}
+
+        <div class="preset-selector-custom-column">
+          <button
+            type="button"
+            class="wizard-toggle-item blue-preset-toggle-item preset-custom-toggle ${bluePresetMode === 'custom' ? 'selected' : ''}"
+            data-blue-preset-mode="custom"
+            aria-pressed="${bluePresetMode === 'custom' ? 'true' : 'false'}"
+          >
+            Custom
+          </button>
+          <input type="hidden" class="wizard-hidden-param" data-param="bluePresetMode" value="${bluePresetMode}" />
         </div>
-        <input type="hidden" class="wizard-hidden-param" data-param="blueDefensePreset" value="${blueDefensePreset}" />
       </div>
 
       <div class="wizard-tab-strip blue-custom-tabs" data-tab-group="blue">
@@ -556,46 +604,50 @@ export function blueParamsHTML(d) {
 
       <div class="wizard-tab-panel" data-tab-panel="blue-gbi">
         <div class="wizard-param-group">
-          ${intSlider('Existing ground-based midcourse interceptors in range', 'nInventory', 0, 2000, 1, d.nInventory, 'blue', 'placeholder')}
-          <div class="blue-custom-only">
-            ${probSlider('Ground-based midcourse interceptor kill probability', 'pkWarhead', pkw, undefined, 0.1, 99.9, 'blue', 'placeholder')}
-          </div>
+          ${intSlider('Existing ground-based midcourse interceptors in range', 'nInventory', 0, 2000, 1, d.nInventory, 'blue', PLACEHOLDER_TOOLTIP_TEXT)}
+          ${probSlider('Ground-based midcourse interceptor kill probability', 'pkWarhead', pkw, undefined, 0.1, 99.9, 'blue', PLACEHOLDER_TOOLTIP_TEXT)}
 
           ${doctrineToggleHTML(
             'Ground-based kinetic midcourse engagement doctrine',
             'midcourseKineticDoctrineMode',
             midcourseDoctrineMode,
             'blue',
-            'placeholder'
+            PLACEHOLDER_TOOLTIP_TEXT
           )}
           <div class="doctrine-midcourse-kinetic-barrage-only">
-            ${intSlider('Shots per detected/tracked target', 'midcourseKineticShotsPerTarget', 1, 6, 1, midcourseShotsPerTarget, 'blue', 'placeholder')}
+            ${intSlider('Shots per detected/tracked target', 'midcourseKineticShotsPerTarget', 1, 6, 1, midcourseShotsPerTarget, 'blue', PLACEHOLDER_TOOLTIP_TEXT)}
           </div>
           <div class="doctrine-midcourse-kinetic-sls-only" style="display:none">
-            ${intSlider('Max shots per detected/tracked target', 'midcourseKineticMaxShotsPerTarget', 1, 4, 1, midcourseMaxShotsPerTarget, 'blue', 'placeholder')}
+            ${intSlider('Max shots per detected/tracked target', 'midcourseKineticMaxShotsPerTarget', 1, 4, 1, midcourseMaxShotsPerTarget, 'blue', PLACEHOLDER_TOOLTIP_TEXT)}
           </div>
         </div>
       </div>
 
       <div class="wizard-tab-panel" data-tab-panel="blue-space">
         <div class="wizard-param-group">
-          ${intSlider('Hypothetical space-based boost interceptors in orbit', 'nSpaceBoostKinetic', 0, 10000, 1, d.nSpaceBoostKinetic ?? 0, 'blue', 'placeholder')}
-          <div class="blue-custom-only">
-            ${probSlider('Hypothetical space-based boost interceptor kill probability', 'pkSpaceBoostKinetic', pkbK, undefined, 0.1, 99.9, 'blue', 'placeholder')}
-          </div>
-          ${intSlider('Shots per detected/tracked missile', 'boostKineticShotsPerTarget', 1, 6, 1, boostKineticShotsPerTarget, 'blue', 'placeholder')}
+          ${intSlider('Hypothetical space-based boost interceptors in orbit', 'nSpaceBoostKinetic', 0, 42000, 1, d.nSpaceBoostKinetic ?? 0, 'blue', PLACEHOLDER_TOOLTIP_TEXT)}
+          ${probSlider('Hypothetical space-based boost interceptor kill probability', 'pkSpaceBoostKinetic', pkbK, undefined, 0.1, 99.9, 'blue', PLACEHOLDER_TOOLTIP_TEXT)}
+          ${intSlider('Shots per detected/tracked missile', 'boostKineticShotsPerTarget', 1, 6, 1, boostKineticShotsPerTarget, 'blue', PLACEHOLDER_TOOLTIP_TEXT)}
         </div>
       </div>
 
       <details class="blue-preset-summary-disclosure" data-blue-preset-summary>
         <summary class="blue-preset-summary-toggle">
           <div class="blue-preset-summary-head">
-            <div class="blue-preset-summary-title" data-blue-preset-title>${presetMeta.title}</div>
-            <div class="blue-preset-summary-description" data-blue-preset-description>${presetMeta.description}</div>
+            <div class="blue-preset-summary-title" data-blue-preset-title>${profileMeta.title}</div>
+            <div class="blue-preset-summary-description" data-blue-preset-description>${profileMeta.description}</div>
           </div>
         </summary>
 
         <div class="blue-preset-summary">
+          <div class="blue-preset-summary-section">
+            <div class="blue-preset-summary-section-title">Quantitative Capacity</div>
+            <div class="blue-preset-summary-grid">
+              ${blueSummaryItemHTML('Ground-based midcourse interceptors in range', 'nInventory')}
+              ${blueSummaryItemHTML('Hypothetical space-based boost interceptors in orbit', 'nSpaceBoostKinetic')}
+            </div>
+          </div>
+
           <div class="blue-preset-summary-section">
             <div class="blue-preset-summary-section-title">Sensors and Detection</div>
             <div class="blue-preset-summary-grid">
@@ -606,10 +658,14 @@ export function blueParamsHTML(d) {
           </div>
 
           <div class="blue-preset-summary-section">
-            <div class="blue-preset-summary-section-title">Interceptor Effectiveness</div>
+            <div class="blue-preset-summary-section-title">Interceptor Effectiveness and Doctrine</div>
             <div class="blue-preset-summary-grid">
-              ${blueSummaryItemHTML('Midcourse interceptor kill probability', 'pkWarhead')}
-              ${blueSummaryItemHTML('Boost interceptor kill probability', 'pkSpaceBoostKinetic')}
+              ${blueSummaryItemHTML('Ground-based midcourse interceptor kill probability', 'pkWarhead')}
+              ${blueSummaryItemHTML('Hypothetical space-based boost interceptor kill probability', 'pkSpaceBoostKinetic')}
+              ${blueSummaryItemHTML('Ground-based kinetic midcourse doctrine', 'midcourseKineticDoctrineMode')}
+              ${blueSummaryItemHTML('Barrage shots per detected/tracked target', 'midcourseKineticShotsPerTarget')}
+              ${blueSummaryItemHTML('SLS max shots per detected/tracked target', 'midcourseKineticMaxShotsPerTarget')}
+              ${blueSummaryItemHTML('Boost shots per detected/tracked missile', 'boostKineticShotsPerTarget')}
             </div>
           </div>
         </div>
@@ -622,23 +678,6 @@ export function blueParamsHTML(d) {
  * RED step parameters (attacker payload).
  * Uses decoysPerMissile — decoys per missile (independent of missile count).
  */
-function redPresetToggleButtonsHTML(selectedPreset) {
-  return RED_ATTACK_PRESET_ORDER.map((presetKey) => {
-    const meta = RED_ATTACK_PRESET_META[presetKey];
-    const isSelected = presetKey === selectedPreset;
-    return `
-      <button
-        type="button"
-        class="wizard-toggle-item red-preset-toggle-item ${isSelected ? 'selected' : ''}"
-        data-red-attack-preset="${presetKey}"
-        aria-pressed="${isSelected ? 'true' : 'false'}"
-      >
-        ${meta.label}
-      </button>
-    `;
-  }).join('');
-}
-
 function redSummaryItemHTML(label, key) {
   return `
     <div class="red-preset-summary-item">
@@ -649,97 +688,89 @@ function redSummaryItemHTML(label, key) {
 }
 
 export function redParamsHTML(d) {
-  const redAttackPreset = d.redAttackPreset ?? DEFAULT_RED_ATTACK_PRESET;
-  const presetMeta = getRedAttackPresetMeta(redAttackPreset);
+  const redPresetMode = d.redPresetMode ?? 'preset';
+  const redQuantitativePreset = d.redQuantitativePreset ?? DEFAULT_RED_QUANTITATIVE_PRESET;
+  const redQualitativePreset = d.redQualitativePreset ?? DEFAULT_RED_QUALITATIVE_PRESET;
+  const profileMeta = getRedAttackProfileMeta(
+    redQuantitativePreset,
+    redQualitativePreset,
+    redPresetMode
+  );
   const decoysPerMissile = d.decoysPerMissile ?? (d.decoysPerWarhead * d.mirvsPerMissile).toFixed(1);
   const kilotonsPerWarhead = d.kilotonsPerWarhead ?? 400;
-  const asatSensing = ((d.asatSensingPenalty ?? 0) * 100).toFixed(1);
-  const asatAvailability = ((d.asatAvailabilityPenalty ?? 0) * 100).toFixed(1);
-  const boostEvade = ((d.boostEvasionPenalty ?? 0) * 100).toFixed(1);
-  const midcourseIntercept = ((d.midcourseInterceptionPenalty ?? 0) * 100).toFixed(1);
-  const launchRegion = d.launchRegion ?? 'default';
+  const launchSiteKey = d.launchSiteKey ?? '';
   return `
-    <div class="red-attack-root" data-red-attack-root data-red-attack-mode="${redAttackPreset === 'custom' ? 'custom' : 'preset'}">
-      <div class="wizard-slider-row red-preset-selector">
-        <div class="wizard-slider-header">
-          ${labelWithTooltipHTML(
-            'Attack preset',
-            'red',
-            'Preset mode keeps the qualitative assumptions fixed for the selected actor and leaves missile count editable. Switch to Custom to unlock all Red inputs.'
-          )}
-        </div>
-        <div class="wizard-toggle-group red-preset-toggle-group" role="radiogroup" aria-label="Red attack preset">
-          ${redPresetToggleButtonsHTML(redAttackPreset)}
-        </div>
-        <input type="hidden" class="wizard-hidden-param" data-param="redAttackPreset" value="${redAttackPreset}" />
-      </div>
-
-      <div class="wizard-tab-strip red-custom-tabs" data-tab-group="red">
-        <div class="wizard-tab active" data-tab="red-strike">Strike Salvo</div>
-        <div class="wizard-tab" data-tab="red-countermeasures">Penetration Aids</div>
-        <div class="wizard-tab" data-tab="red-counterspace">Counterspace Attack</div>
-      </div>
-
-      <div class="wizard-tab-panel active" data-tab-panel="red-strike">
-        <div class="wizard-param-group">
-          <div class="red-shared-control">
-            ${intSlider('Ballistic missiles in strike', 'nMissiles', 1, 1000, 1, d.nMissiles, 'red', 'placeholder')}
-          </div>
-          <div class="red-custom-only">
-            ${intSlider('Warheads per missile', 'mirvsPerMissile', 1, 16, 1, d.mirvsPerMissile, 'red', 'placeholder')}
-          </div>
-          <div class="red-custom-only">
-            ${intSlider('Kilotons per warhead', 'kilotonsPerWarhead', 20, 5000, 10, kilotonsPerWarhead, 'red', 'placeholder')}
-          </div>
-          <div class="wizard-slider-row red-custom-only">
+    <div class="red-attack-root" data-red-attack-root data-red-attack-mode="${redPresetMode}">
+      <div class="preset-selector-layout red-preset-selector">
+        <div class="preset-selector-rows">
+          <div class="wizard-slider-row preset-selector-row">
             <div class="wizard-slider-header">
-              ${controlLabelHTML('Launch region preset', 'red', 'placeholder')}
+              ${labelWithTooltipHTML(
+                'Quantitative presets',
+                'red',
+                RED_QUANTITATIVE_PRESET_TOOLTIP_TEXT
+              )}
             </div>
-            <select class="wizard-select" data-param="launchRegion">
-              ${launchRegionOptionsHTML(launchRegion)}
-            </select>
+            <div class="wizard-toggle-group red-preset-toggle-group" role="radiogroup" aria-label="Red quantitative presets">
+              ${buildPresetToggleButtonsHTML(
+                RED_QUANTITATIVE_PRESET_ORDER,
+                RED_QUANTITATIVE_PRESET_META,
+                redQuantitativePreset,
+                'data-red-quantitative-preset',
+                'red-preset-toggle-item'
+              )}
+            </div>
+            <input type="hidden" class="wizard-hidden-param" data-param="redQuantitativePreset" value="${redQuantitativePreset}" />
+          </div>
+
+          <div class="wizard-slider-row preset-selector-row">
+            <div class="wizard-slider-header">
+              ${labelWithTooltipHTML(
+                'Qualitative presets',
+                'red',
+                RED_QUALITATIVE_PRESET_TOOLTIP_TEXT
+              )}
+            </div>
+            <div class="wizard-toggle-group red-preset-toggle-group" role="radiogroup" aria-label="Red qualitative presets">
+              ${buildPresetToggleButtonsHTML(
+                RED_QUALITATIVE_PRESET_ORDER,
+                RED_QUALITATIVE_PRESET_META,
+                redQualitativePreset,
+                'data-red-qualitative-preset',
+                'red-preset-toggle-item'
+              )}
+            </div>
+            <input type="hidden" class="wizard-hidden-param" data-param="redQualitativePreset" value="${redQualitativePreset}" />
           </div>
         </div>
+
+        <div class="preset-selector-custom-column">
+          <button
+            type="button"
+            class="wizard-toggle-item red-preset-toggle-item preset-custom-toggle ${redPresetMode === 'custom' ? 'selected' : ''}"
+            data-red-preset-mode="custom"
+            aria-pressed="${redPresetMode === 'custom' ? 'true' : 'false'}"
+          >
+            Custom
+          </button>
+          <input type="hidden" class="wizard-hidden-param" data-param="redPresetMode" value="${redPresetMode}" />
+        </div>
+
+        <input type="hidden" class="wizard-hidden-param" data-param="launchSiteKey" value="${launchSiteKey}" />
       </div>
 
-      <div class="wizard-tab-panel" data-tab-panel="red-countermeasures">
-        <div class="wizard-param-group">
-          ${intSlider('Decoys per missile', 'decoysPerMissile', 0, 60, 1, decoysPerMissile, 'red', 'placeholder')}
-          ${probSlider('Boost-phase survivability and evasion', 'boostEvasionPenalty', boostEvade, undefined, 0, 99.9, 'red', 'placeholder')}
-          ${probSlider('Midcourse discrimination and allocation penalty', 'midcourseInterceptionPenalty', midcourseIntercept, undefined, 0, 99.9, 'red', 'placeholder')}
-        </div>
-      </div>
-
-      <div class="wizard-tab-panel" data-tab-panel="red-counterspace">
-        <div class="wizard-param-group">
-          ${probSlider(
-            'Degradation of Blue’s sensing and tracking',
-            'asatSensingPenalty',
-            asatSensing,
-            undefined,
-            0,
-            99.9,
-            'red',
-            'Reduces Blue’s effective detection-and-tracking probability by this fraction in both boost and midcourse. It affects whether incoming missiles, warheads, and decoys are detected for engagement. It does not directly change warhead discrimination, interceptor kill probability, or interceptor inventory.'
-          )}
-          ${probSlider(
-            'Degradation of space-based boost interceptor availability',
-            'asatAvailabilityPenalty',
-            asatAvailability,
-            undefined,
-            0,
-            99.9,
-            'red',
-            'Reduces the number of hypothetical space-based boost interceptors available for engagement after coverage is applied. It only affects Blue’s space-based boost layer. It does not reduce ground-based midcourse interceptors, sensing/tracking, or interceptor kill probability.'
-          )}
-        </div>
+      <div class="wizard-param-group red-custom-panel">
+        ${intSlider('Ballistic missiles in strike', 'nMissiles', 1, 1000, 1, d.nMissiles, 'red', PLACEHOLDER_TOOLTIP_TEXT)}
+        ${intSlider('Warheads per missile', 'mirvsPerMissile', 1, 16, 1, d.mirvsPerMissile, 'red', PLACEHOLDER_TOOLTIP_TEXT)}
+        ${intSlider('Kilotons per warhead', 'kilotonsPerWarhead', 20, 5000, 10, kilotonsPerWarhead, 'red', PLACEHOLDER_TOOLTIP_TEXT)}
+        ${intSlider('Decoys per missile', 'decoysPerMissile', 0, 60, 1, decoysPerMissile, 'red', PLACEHOLDER_TOOLTIP_TEXT)}
       </div>
 
       <details class="red-preset-summary-disclosure" data-red-preset-summary>
         <summary class="red-preset-summary-toggle">
           <div class="red-preset-summary-head">
-            <div class="red-preset-summary-title" data-red-preset-title>${presetMeta.title}</div>
-            <div class="red-preset-summary-description" data-red-preset-description>${presetMeta.description}</div>
+            <div class="red-preset-summary-title" data-red-preset-title>${profileMeta.title}</div>
+            <div class="red-preset-summary-description" data-red-preset-description>${profileMeta.description}</div>
           </div>
         </summary>
 
@@ -747,26 +778,11 @@ export function redParamsHTML(d) {
           <div class="red-preset-summary-section">
             <div class="red-preset-summary-section-title">Strike Salvo</div>
             <div class="red-preset-summary-grid">
+              ${redSummaryItemHTML('Ballistic missiles in strike', 'nMissiles')}
               ${redSummaryItemHTML('Warheads per missile', 'mirvsPerMissile')}
               ${redSummaryItemHTML('Kilotons per warhead', 'kilotonsPerWarhead')}
-              ${redSummaryItemHTML('Launch region', 'launchRegion')}
-            </div>
-          </div>
-
-          <div class="red-preset-summary-section">
-            <div class="red-preset-summary-section-title">Penetration Aids</div>
-            <div class="red-preset-summary-grid">
               ${redSummaryItemHTML('Decoys per missile', 'decoysPerMissile')}
-              ${redSummaryItemHTML('Boost evasion', 'boostEvasionPenalty')}
-              ${redSummaryItemHTML('Midcourse penalty', 'midcourseInterceptionPenalty')}
-            </div>
-          </div>
-
-          <div class="red-preset-summary-section">
-            <div class="red-preset-summary-section-title">Counterspace Attack</div>
-            <div class="red-preset-summary-grid">
-              ${redSummaryItemHTML('Blue sensing/tracking degradation', 'asatSensingPenalty')}
-              ${redSummaryItemHTML('Degradation of space-based boost interceptor availability', 'asatAvailabilityPenalty')}
+              ${redSummaryItemHTML('Launch site', 'launchSiteKey')}
             </div>
           </div>
         </div>
@@ -802,131 +818,6 @@ export function simParamsHTML(d) {
           )}
         </div>
         <input type="text" class="wizard-text-input" data-param="seed" placeholder="auto" value="${d.seed ?? ''}" />
-      </div>
-    </div>
-  `;
-}
-
-/**
- * Render the dashboard drawer controls panel (tabs for Blue, Red, CM, Sim).
- */
-export function renderDrawerControls(container, blueKey, redKey) {
-  const d = readParamsFromUI(blueKey, redKey);
-
-  container.innerHTML = `
-    <div class="tab-panel active" id="tab-blue">
-      <div class="panel-section">
-        <h4>Blue (Defender)</h4>
-        <p>${blueKey}</p>
-        <div class="param-group">
-          <label>
-            Blue network baseline detection/tracking probability:
-            <input type="number" class="param-input" data-param="pDetectTrack" min="0" max="1" step="0.01" value="${d.pDetectTrack}" />
-          </label>
-          <label>
-            Blue network warhead discrimination accuracy (W->W):
-            <input type="number" class="param-input" data-param="pClassifyWarhead" min="0" max="1" step="0.01" value="${d.pClassifyWarhead}" />
-          </label>
-          <label>
-            Blue network discrimination false-alarm rate (D->W):
-            <input type="number" class="param-input" data-param="pFalseAlarmDecoy" min="0" max="1" step="0.01" value="${d.pFalseAlarmDecoy}" />
-          </label>
-          <label>
-            Ground-based midcourse interceptor kill probability:
-            <input type="number" class="param-input" data-param="pkWarhead" min="0" max="1" step="0.01" value="${d.pkWarhead}" />
-          </label>
-          <label>
-            Ground-based midcourse interceptors in range (existing U.S. architecture):
-            <input type="number" class="param-input" data-param="nInventory" min="0" step="1" value="${d.nInventory}" />
-          </label>
-          <label>
-            Hypothetical space-based boost interceptors in orbit:
-            <input type="number" class="param-input" data-param="nSpaceBoostKinetic" min="0" max="10000" step="1" value="${d.nSpaceBoostKinetic ?? 0}" />
-          </label>
-          <label>
-            Hypothetical space-based boost interceptor kill probability:
-            <input type="number" class="param-input" data-param="pkSpaceBoostKinetic" min="0" max="1" step="0.01" value="${d.pkSpaceBoostKinetic ?? 0.5}" />
-          </label>
-        </div>
-      </div>
-    </div>
-
-    <div class="tab-panel" id="tab-red">
-      <div class="panel-section">
-        <h4>Red (Attacker)</h4>
-        <p>${redKey}</p>
-        <div class="param-group">
-          <label>
-            Missiles:
-            <input type="number" class="param-input" data-param="nMissiles" min="1" step="1" value="${d.nMissiles}" />
-          </label>
-          <label>
-            MIRVs per Missile:
-            <input type="number" class="param-input" data-param="mirvsPerMissile" min="1" step="1" value="${d.mirvsPerMissile}" />
-          </label>
-          <label>
-            Kilotons per Warhead:
-            <input type="number" class="param-input" data-param="kilotonsPerWarhead" min="20" max="5000" step="10" value="${d.kilotonsPerWarhead ?? 400}" />
-          </label>
-          <label>
-            Decoys per Warhead:
-            <input type="number" class="param-input" data-param="decoysPerWarhead" min="0" step="1" value="${d.decoysPerWarhead}" />
-          </label>
-          <label>
-            Launch region preset:
-            <select class="param-input" data-param="launchRegion">
-              ${launchRegionOptionsHTML(d.launchRegion ?? 'default')}
-            </select>
-          </label>
-          <label>
-            Degradation of Blue’s sensing and tracking:
-            <input type="number" class="param-input" data-param="asatSensingPenalty" min="0" max="1" step="0.01" value="${d.asatSensingPenalty ?? 0}" />
-          </label>
-          <label>
-            Degradation of space-based boost interceptor availability:
-            <input type="number" class="param-input" data-param="asatAvailabilityPenalty" min="0" max="1" step="0.01" value="${d.asatAvailabilityPenalty ?? 0}" />
-          </label>
-          <label>
-            Boost-phase survivability and evasion:
-            <input type="number" class="param-input" data-param="boostEvasionPenalty" min="0" max="1" step="0.01" value="${d.boostEvasionPenalty ?? 0}" />
-          </label>
-        </div>
-      </div>
-    </div>
-
-
-    <div class="tab-panel" id="tab-sim">
-      <div class="panel-section">
-        <h4>Simulation</h4>
-        <div class="param-group">
-          <label>
-            Ground-based kinetic midcourse doctrine mode:
-            <select class="param-input" data-param="midcourseKineticDoctrineMode">
-              <option value="barrage" ${(d.midcourseKineticDoctrineMode ?? d.doctrineMode) === 'barrage' ? 'selected' : ''}>Barrage</option>
-              <option value="sls" ${(d.midcourseKineticDoctrineMode ?? d.doctrineMode) === 'sls' ? 'selected' : ''}>Shoot-Look-Shoot</option>
-            </select>
-          </label>
-          <label>
-            Ground-based kinetic midcourse shots/track (Barrage):
-            <input type="number" class="param-input" data-param="midcourseKineticShotsPerTarget" min="0" step="1" value="${d.midcourseKineticShotsPerTarget ?? d.shotsPerTarget}" />
-          </label>
-          <label>
-            Ground-based kinetic midcourse max shots/track (SLS):
-            <input type="number" class="param-input" data-param="midcourseKineticMaxShotsPerTarget" min="1" max="4" step="1" value="${d.midcourseKineticMaxShotsPerTarget ?? d.maxShotsPerTarget}" />
-          </label>
-          <label>
-            Shots per detected/tracked missile:
-            <input type="number" class="param-input" data-param="boostKineticShotsPerTarget" min="0" step="1" value="${d.boostKineticShotsPerTarget ?? d.shotsPerTarget}" />
-          </label>
-          <label>
-            Monte Carlo Trials:
-            <input type="number" class="param-input" data-param="nTrials" min="1" step="100" value="${d.nTrials}" />
-          </label>
-          <label>
-            Seed (blank=random):
-            <input type="number" class="param-input" data-param="seed" step="1" value="${d.seed || ''}" />
-          </label>
-        </div>
       </div>
     </div>
   `;

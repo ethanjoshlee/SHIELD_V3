@@ -18,10 +18,12 @@
   "nInventory": 44,
   "nSpaceBoostKinetic": 0,
   "pkSpaceBoostKinetic": 0.50,
-  "launchRegion": "default",
-  "asatSensingPenalty": 0,
-  "asatAvailabilityPenalty": 0,
-  "boostEvasionPenalty": 0.0,
-  "midcourseInterceptionPenalty": 0,
+  "bluePresetMode": "preset",
+  "blueQuantitativePreset": "medium",
+  "blueQualitativePreset": "baseline",
+  "launchSiteKey": null,
+  "redPresetMode": "preset",
+  "redQuantitativePreset": "medium",
+  "redQualitativePreset": "baseline",
   "nTrials": 2000
 }

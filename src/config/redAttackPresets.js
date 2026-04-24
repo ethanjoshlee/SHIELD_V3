@@ -1,215 +1,283 @@
-export const DEFAULT_RED_ATTACK_PRESET = 'baseline';
+export const DEFAULT_RED_QUANTITATIVE_PRESET = 'medium';
+export const DEFAULT_RED_QUALITATIVE_PRESET = 'baseline';
 
-export const RED_ATTACK_PRESET_ORDER = [
-  'limited',
-  'baseline',
-  'extreme',
-  'custom',
+export const RED_QUANTITATIVE_PRESET_ORDER = [
+  'small',
+  'medium',
+  'large',
 ];
 
-export const RED_ATTACK_PRESET_META = {
-  limited: {
-    label: 'Limited',
-    title: 'Limited Attack Profile',
-    description: 'Smaller salvo with simpler penetration aids and limited counterspace pressure.',
+export const RED_QUALITATIVE_PRESET_ORDER = [
+  'conservative',
+  'baseline',
+  'optimistic',
+];
+
+export const RED_QUANTITATIVE_PRESET_META = {
+  small: {
+    label: 'Small',
+    title: 'Small Quantitative Preset',
+    description: 'Smaller modeled strike size and missile loading.',
   },
-  baseline: {
-    label: 'Baseline',
-    title: 'Baseline Attack Profile',
-    description: 'Representative default assumptions for this actor’s strike sophistication.',
+  medium: {
+    label: 'Medium',
+    title: 'Medium Quantitative Preset',
+    description: 'Mid-range modeled strike size and missile loading.',
   },
-  extreme: {
-    label: 'Extreme',
-    title: 'Extreme Attack Profile',
-    description: 'Stress case with heavier penetration aids and stronger counterspace pressure.',
-  },
-  custom: {
-    label: 'Custom',
-    title: 'Custom Attack Profile',
-    description: 'Manual control over strike, penetration-aid, and counterspace assumptions.',
+  large: {
+    label: 'Large',
+    title: 'Large Quantitative Preset',
+    description: 'Larger modeled strike size and missile loading.',
   },
 };
 
-export const RED_ATTACK_PRESET_FIELDS = [
+export const RED_QUALITATIVE_PRESET_META = {
+  conservative: {
+    label: 'Conservative',
+    title: 'Conservative Qualitative Preset',
+    description: 'Lower-yield and lighter countermeasure assumptions.',
+  },
+  baseline: {
+    label: 'Baseline',
+    title: 'Baseline Qualitative Preset',
+    description: 'Representative warhead-yield and decoy assumptions.',
+  },
+  optimistic: {
+    label: 'Optimistic',
+    title: 'Optimistic Qualitative Preset',
+    description: 'Higher-yield and heavier decoy assumptions.',
+  },
+};
+
+export const RED_ATTACK_QUANTITATIVE_FIELDS = [
   'nMissiles',
   'mirvsPerMissile',
+];
+
+export const RED_ATTACK_QUALITATIVE_FIELDS = [
   'decoysPerMissile',
   'kilotonsPerWarhead',
-  'launchRegion',
-  'boostEvasionPenalty',
-  'midcourseInterceptionPenalty',
-  'asatSensingPenalty',
-  'asatAvailabilityPenalty',
+];
+
+export const RED_ATTACK_PRESET_FIELDS = [
+  ...RED_ATTACK_QUANTITATIVE_FIELDS,
+  ...RED_ATTACK_QUALITATIVE_FIELDS,
+  'launchSiteKey',
 ];
 
 export const RED_ATTACK_PRESETS = {
   DPRK: {
-    limited: {
-      nMissiles: 12,
-      mirvsPerMissile: 1,
-      decoysPerMissile: 0,
-      kilotonsPerWarhead: 40,
-      launchRegion: 'north_korea_land',
-      boostEvasionPenalty: 0.00,
-      midcourseInterceptionPenalty: 0.00,
-      asatSensingPenalty: 0.00,
-      asatAvailabilityPenalty: 0.05,
+    defaults: {
+      launchSiteKey: 'sinpung_dong',
     },
-    baseline: {
-      nMissiles: 35,
-      mirvsPerMissile: 1,
-      decoysPerMissile: 1,
-      kilotonsPerWarhead: 40,
-      launchRegion: 'north_korea_land',
-      boostEvasionPenalty: 0.01,
-      midcourseInterceptionPenalty: 0.00,
-      asatSensingPenalty: 0.05,
-      asatAvailabilityPenalty: 0.15,
+    quantitative: {
+      small: {
+        nMissiles: 5,
+        mirvsPerMissile: 1,
+      },
+      medium: {
+        nMissiles: 10,
+        mirvsPerMissile: 1,
+      },
+      large: {
+        nMissiles: 20,
+        mirvsPerMissile: 2,
+      },
     },
-    extreme: {
-      nMissiles: 60,
-      mirvsPerMissile: 2,
-      decoysPerMissile: 2,
-      kilotonsPerWarhead: 40,
-      launchRegion: 'north_korea_land',
-      boostEvasionPenalty: 0.05,
-      midcourseInterceptionPenalty: 0.03,
-      asatSensingPenalty: 0.10,
-      asatAvailabilityPenalty: 0.25,
+    qualitative: {
+      conservative: {
+        decoysPerMissile: 0,
+        kilotonsPerWarhead: 10,
+      },
+      baseline: {
+        decoysPerMissile: 1,
+        kilotonsPerWarhead: 20,
+      },
+      optimistic: {
+        decoysPerMissile: 3,
+        kilotonsPerWarhead: 120,
+      },
     },
   },
 
   Iran: {
-    limited: {
-      nMissiles: 20,
-      mirvsPerMissile: 1,
-      decoysPerMissile: 0,
-      kilotonsPerWarhead: 60,
-      launchRegion: 'default',
-      boostEvasionPenalty: 0.00,
-      midcourseInterceptionPenalty: 0.00,
-      asatSensingPenalty: 0.00,
-      asatAvailabilityPenalty: 0.00,
+    defaults: {
+      launchSiteKey: 'shahroud',
     },
-    baseline: {
-      nMissiles: 60,
-      mirvsPerMissile: 1,
-      decoysPerMissile: 1,
-      kilotonsPerWarhead: 60,
-      launchRegion: 'default',
-      boostEvasionPenalty: 0.02,
-      midcourseInterceptionPenalty: 0.00,
-      asatSensingPenalty: 0.02,
-      asatAvailabilityPenalty: 0.05,
+    quantitative: {
+      small: {
+        nMissiles: 20,
+        mirvsPerMissile: 1,
+      },
+      medium: {
+        nMissiles: 60,
+        mirvsPerMissile: 1,
+      },
+      large: {
+        nMissiles: 120,
+        mirvsPerMissile: 2,
+      },
     },
-    extreme: {
-      nMissiles: 120,
-      mirvsPerMissile: 2,
-      decoysPerMissile: 2,
-      kilotonsPerWarhead: 60,
-      launchRegion: 'default',
-      boostEvasionPenalty: 0.05,
-      midcourseInterceptionPenalty: 0.02,
-      asatSensingPenalty: 0.05,
-      asatAvailabilityPenalty: 0.10,
+    qualitative: {
+      conservative: {
+        decoysPerMissile: 0,
+        kilotonsPerWarhead: 40,
+      },
+      baseline: {
+        decoysPerMissile: 1,
+        kilotonsPerWarhead: 60,
+      },
+      optimistic: {
+        decoysPerMissile: 3,
+        kilotonsPerWarhead: 100,
+      },
     },
   },
 
   China: {
-    limited: {
-      nMissiles: 150,
-      mirvsPerMissile: 1,
-      decoysPerMissile: 4,
-      kilotonsPerWarhead: 340,
-      launchRegion: 'china_interior',
-      boostEvasionPenalty: 0.05,
-      midcourseInterceptionPenalty: 0.00,
-      asatSensingPenalty: 0.05,
-      asatAvailabilityPenalty: 0.15,
+    defaults: {
+      launchSiteKey: 'yumen',
     },
-    baseline: {
-      nMissiles: 622,
-      mirvsPerMissile: 2,
-      decoysPerMissile: 11,
-      kilotonsPerWarhead: 340,
-      launchRegion: 'china_interior',
-      boostEvasionPenalty: 0.13,
-      midcourseInterceptionPenalty: 0.00,
-      asatSensingPenalty: 0.20,
-      asatAvailabilityPenalty: 0.60,
+    quantitative: {
+      small: {
+        nMissiles: 12,
+        mirvsPerMissile: 1,
+      },
+      medium: {
+        nMissiles: 36,
+        mirvsPerMissile: 3,
+      },
+      large: {
+        nMissiles: 100,
+        mirvsPerMissile: 5,
+      },
     },
-    extreme: {
-      nMissiles: 850,
-      mirvsPerMissile: 3,
-      decoysPerMissile: 18,
-      kilotonsPerWarhead: 340,
-      launchRegion: 'china_interior',
-      boostEvasionPenalty: 0.20,
-      midcourseInterceptionPenalty: 0.08,
-      asatSensingPenalty: 0.30,
-      asatAvailabilityPenalty: 0.80,
+    qualitative: {
+      conservative: {
+        decoysPerMissile: 1,
+        kilotonsPerWarhead: 50,
+      },
+      baseline: {
+        decoysPerMissile: 3,
+        kilotonsPerWarhead: 150,
+      },
+      optimistic: {
+        decoysPerMissile: 6,
+        kilotonsPerWarhead: 300,
+      },
     },
   },
 
   Russia: {
-    limited: {
-      nMissiles: 200,
-      mirvsPerMissile: 3,
-      decoysPerMissile: 12,
-      kilotonsPerWarhead: 615,
-      launchRegion: 'russia_west',
-      boostEvasionPenalty: 0.08,
-      midcourseInterceptionPenalty: 0.02,
-      asatSensingPenalty: 0.15,
-      asatAvailabilityPenalty: 0.35,
+    defaults: {
+      launchSiteKey: 'dombarovsky',
     },
-    baseline: {
-      nMissiles: 692,
-      mirvsPerMissile: 5,
-      decoysPerMissile: 35,
-      kilotonsPerWarhead: 615,
-      launchRegion: 'russia_west',
-      boostEvasionPenalty: 0.18,
-      midcourseInterceptionPenalty: 0.00,
-      asatSensingPenalty: 0.35,
-      asatAvailabilityPenalty: 0.80,
+    quantitative: {
+      small: {
+        nMissiles: 12,
+        mirvsPerMissile: 2,
+      },
+      medium: {
+        nMissiles: 100,
+        mirvsPerMissile: 4,
+      },
+      large: {
+        nMissiles: 250,
+        mirvsPerMissile: 6,
+      },
     },
-    extreme: {
-      nMissiles: 900,
-      mirvsPerMissile: 6,
-      decoysPerMissile: 50,
-      kilotonsPerWarhead: 615,
-      launchRegion: 'russia_east',
-      boostEvasionPenalty: 0.25,
-      midcourseInterceptionPenalty: 0.10,
-      asatSensingPenalty: 0.45,
-      asatAvailabilityPenalty: 0.90,
+    qualitative: {
+      conservative: {
+        decoysPerMissile: 4,
+        kilotonsPerWarhead: 100,
+      },
+      baseline: {
+        decoysPerMissile: 6,
+        kilotonsPerWarhead: 300,
+      },
+      optimistic: {
+        decoysPerMissile: 10,
+        kilotonsPerWarhead: 800,
+      },
     },
   },
 };
 
-function normalizePresetKey(presetKey) {
-  if (presetKey === 'limited' || presetKey === 'baseline' || presetKey === 'extreme') {
+function normalizeQuantitativePresetKey(presetKey) {
+  if (presetKey === 'small' || presetKey === 'medium' || presetKey === 'large') {
     return presetKey;
   }
-  return DEFAULT_RED_ATTACK_PRESET;
+  return DEFAULT_RED_QUANTITATIVE_PRESET;
 }
 
-export function getRedAttackPresetMeta(presetKey) {
-  return RED_ATTACK_PRESET_META[presetKey] ?? RED_ATTACK_PRESET_META[DEFAULT_RED_ATTACK_PRESET];
+function normalizeQualitativePresetKey(presetKey) {
+  if (presetKey === 'conservative' || presetKey === 'baseline' || presetKey === 'optimistic') {
+    return presetKey;
+  }
+  return DEFAULT_RED_QUALITATIVE_PRESET;
 }
 
-export function getRedAttackPreset(countryKey, presetKey = DEFAULT_RED_ATTACK_PRESET) {
-  const safePresetKey = normalizePresetKey(presetKey);
+export function getRedQuantitativePresetMeta(presetKey) {
+  const safePresetKey = normalizeQuantitativePresetKey(presetKey);
+  return RED_QUANTITATIVE_PRESET_META[safePresetKey];
+}
+
+export function getRedQualitativePresetMeta(presetKey) {
+  const safePresetKey = normalizeQualitativePresetKey(presetKey);
+  return RED_QUALITATIVE_PRESET_META[safePresetKey];
+}
+
+export function getRedQuantitativePreset(countryKey, presetKey = DEFAULT_RED_QUANTITATIVE_PRESET) {
+  const safePresetKey = normalizeQuantitativePresetKey(presetKey);
   const countryPresets = RED_ATTACK_PRESETS[countryKey];
   if (!countryPresets) return null;
-  return countryPresets[safePresetKey] ?? countryPresets[DEFAULT_RED_ATTACK_PRESET] ?? null;
+  return countryPresets.quantitative?.[safePresetKey] ?? null;
 }
 
-export function resolveRedAttackProfile(countryKey, presetKey = DEFAULT_RED_ATTACK_PRESET, overrides = {}) {
-  const preset = getRedAttackPreset(countryKey, presetKey) ?? {};
+export function getRedQualitativePreset(countryKey, presetKey = DEFAULT_RED_QUALITATIVE_PRESET) {
+  const safePresetKey = normalizeQualitativePresetKey(presetKey);
+  const countryPresets = RED_ATTACK_PRESETS[countryKey];
+  if (!countryPresets) return null;
+  return countryPresets.qualitative?.[safePresetKey] ?? null;
+}
+
+export function getRedAttackProfileMeta(
+  quantitativePresetKey = DEFAULT_RED_QUANTITATIVE_PRESET,
+  qualitativePresetKey = DEFAULT_RED_QUALITATIVE_PRESET,
+  mode = 'preset'
+) {
+  if (mode === 'custom') {
+    return {
+      title: 'Custom Attack Profile',
+      description: 'Manual control over Red quantitative and qualitative attack assumptions.',
+    };
+  }
+
+  const quantitativeMeta = getRedQuantitativePresetMeta(quantitativePresetKey);
+  const qualitativeMeta = getRedQualitativePresetMeta(qualitativePresetKey);
   return {
-    ...preset,
+    title: 'Selected Attack Profile',
+    description: `Quantitative preset: ${quantitativeMeta.label}. Qualitative preset: ${qualitativeMeta.label}.`,
+  };
+}
+
+export function resolveRedAttackProfile(
+  countryKey,
+  {
+    quantitativePresetKey = DEFAULT_RED_QUANTITATIVE_PRESET,
+    qualitativePresetKey = DEFAULT_RED_QUALITATIVE_PRESET,
+  } = {},
+  overrides = {}
+) {
+  const countryPresets = RED_ATTACK_PRESETS[countryKey] ?? {};
+  const defaults = countryPresets.defaults ?? {};
+  const quantitativePreset = getRedQuantitativePreset(countryKey, quantitativePresetKey) ?? {};
+  const qualitativePreset = getRedQualitativePreset(countryKey, qualitativePresetKey) ?? {};
+
+  return {
+    ...defaults,
+    ...quantitativePreset,
+    ...qualitativePreset,
     ...overrides,
   };
 }

@@ -1,15 +1,13 @@
 /**
  * UI State Machine — manages screen transitions.
- * State keys are shared across boot, setup, loading, dashboard, and results screens.
+ * State keys are shared across boot, wizard, loading, and results screens.
  */
 
-const STATES = { BOOT: 'boot', SELECT: 'select', WIZARD: 'wizard', LOADING: 'loading', DASHBOARD: 'dashboard', RESULTS: 'results' };
+const STATES = { BOOT: 'boot', WIZARD: 'wizard', LOADING: 'loading', RESULTS: 'results' };
 
 let currentState = null;
 let stateData = {};
 const listeners = [];
-
-export function getStateData() { return stateData; }
 
 export function onStateChange(fn) { listeners.push(fn); }
 

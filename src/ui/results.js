@@ -1,12 +1,18 @@
 /**
- * Results panel rendering and interactions for dashboard + final results screen.
+ * Results panel rendering and interactions for the results screen.
  */
 
 import { fmt } from '../utils/format.js';
 import { renderHistogramHTML } from './charts.js';
-import { LAUNCH_REGION_PRESETS } from '../config/launchRegions.js';
-import { getBlueDefensePresetMeta } from '../config/blueDefensePresets.js';
-import { getRedAttackPresetMeta } from '../config/redAttackPresets.js';
+import { getRedLaunchSite, SBI_CONSTELLATION_ASSUMPTIONS } from '../config/launchSites.js';
+import {
+  getBlueQuantitativePresetMeta,
+  getBlueQualitativePresetMeta,
+} from '../config/blueDefensePresets.js';
+import {
+  getRedQuantitativePresetMeta,
+  getRedQualitativePresetMeta,
+} from '../config/redAttackPresets.js';
 import { DELIVERED_KILOTONS_BENCHMARKS } from './deliveredKilotonsBenchmarks.js';
 import { COST_MODEL_REFERENCE, COST_MODEL_UI } from '../model/costModel.js';
 
@@ -73,6 +79,36 @@ function formatDoctrineLine(mode, shots, maxShots) {
 
 function formatCount(value) {
   return Math.round(Number(value) || 0).toLocaleString('en-US');
+}
+
+function formatCoordinate(value, positiveHemisphere, negativeHemisphere) {
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue)) return 'Unspecified';
+
+  const hemisphere = numericValue >= 0 ? positiveHemisphere : negativeHemisphere;
+  return `${Math.abs(numericValue).toFixed(2)} deg ${hemisphere}`;
+}
+
+function formatCoordinatePair(latDeg, lngDeg) {
+  return `${formatCoordinate(latDeg, 'N', 'S')}, ${formatCoordinate(lngDeg, 'E', 'W')}`;
+}
+
+function formatReferenceOrbitSummary(elements) {
+  if (!elements) return 'Reference seed orbit not specified.';
+
+  return [
+    `a = ${fmt(elements.semiMajorAxisKm ?? 0, 0)} km`,
+    `e = ${fmt(elements.eccentricity ?? 0, 2)}`,
+    `i = ${fmt(elements.inclinationDeg ?? 0, 0)} deg`,
+    `RAAN = ${fmt(elements.rightAscensionOfAscendingNodeDeg ?? 0, 0)} deg`,
+    `arg. perigee = ${fmt(elements.argumentOfPerigeeDeg ?? 0, 0)} deg`,
+    `true anomaly = ${fmt(elements.trueAnomalyDeg ?? 0, 0)} deg`,
+  ].join(', ');
+}
+
+function humanizeConstellationFamily(family) {
+  if (!family) return 'reference constellation';
+  return family.replaceAll('_', ' ');
 }
 
 function formatCostMagnitude(valueB) {
@@ -167,21 +203,47 @@ export function renderResultsContent(params, result) {
 
   const nSpaceBoostKinetic = params.nSpaceBoostKinetic ?? 0;
   const pkSpaceBoostKinetic = params.pkSpaceBoostKinetic ?? 0;
-  const launchRegion = params.launchRegion ?? 'default';
-  const asatSensingPenalty = params.asatSensingPenalty ?? 0;
-  const asatAvailabilityPenalty = params.asatAvailabilityPenalty ?? 0;
-  const boostEvasionPenalty = params.boostEvasionPenalty ?? 0;
-  const midcourseInterceptionPenalty = params.midcourseInterceptionPenalty ?? 0;
+  const launchSiteKey = params.launchSiteKey ?? '';
+  const launchSite = getRedLaunchSite(launchSiteKey);
+  const launchSiteLabel = launchSite?.label || launchSiteKey || 'Unspecified';
+  const launchSiteCoordinates = launchSite
+    ? formatCoordinatePair(launchSite.coordinates?.latDeg, launchSite.coordinates?.lngDeg)
+    : 'Unspecified';
+  const launchSiteNote =
+    launchSite?.notes ||
+    'Representative launch site is fixed by Red actor selection and used in the boost-phase space-layer availability calculation.';
+  const launchSiteSbiAvailabilityPercent =
+    launchSite?.sbiAvailability?.percentOfConstellation ?? 0;
+  const orbitModel = SBI_CONSTELLATION_ASSUMPTIONS.orbitModel ?? {};
+  const referenceElements = orbitModel.referenceSatelliteClassicalElements ?? null;
+  const availabilityModel = SBI_CONSTELLATION_ASSUMPTIONS.availabilityApproximation ?? {};
+  const spaceLayerGeometrySummary = [
+    `${orbitModel.shape ?? 'Unspecified'} ${humanizeConstellationFamily(orbitModel.family)}`,
+    `${fmt(orbitModel.altitudeKm ?? 0, 0)} km altitude`,
+    `${fmt(orbitModel.inclinationDeg ?? 0, 0)} deg inclination`,
+    `${fmt(orbitModel.interceptorEngagementRadiusKm ?? 0, 0)} km interceptor engagement radius`,
+  ].join(', ');
+  const referenceOrbitSummary = formatReferenceOrbitSummary(referenceElements);
+  const availabilitySummary = [
+    `${availabilityModel.method ?? 'Approximation'} using actor-fixed launch-site latitude`,
+    `launch-site availability = ${fmt(launchSiteSbiAvailabilityPercent, 2)}% of constellation`,
+  ].join('; ');
   const meanDeliveredKilotons = s.meanDeliveredKilotons ?? s.meanKtDelivered ?? 0;
   const p10DeliveredKilotons = s.p10DeliveredKilotons ?? s.p10KtDelivered ?? 0;
   const medianDeliveredKilotons = s.medianDeliveredKilotons ?? s.medianKtDelivered ?? 0;
   const p90DeliveredKilotons = s.p90DeliveredKilotons ?? s.p90KtDelivered ?? 0;
   const hasDistributionData = !!(result.penReal && result.penReal.length > 0);
   const defaultDistTitle = 'Delivered Kilotons';
-  const blueDefensePreset = params.blueDefensePreset ?? 'baseline';
-  const blueDefensePresetMeta = getBlueDefensePresetMeta(blueDefensePreset);
-  const redAttackPreset = params.redAttackPreset ?? 'baseline';
-  const redAttackPresetMeta = getRedAttackPresetMeta(redAttackPreset);
+  const bluePresetMode = params.bluePresetMode ?? 'preset';
+  const blueQuantitativePreset = params.blueQuantitativePreset ?? 'medium';
+  const blueQualitativePreset = params.blueQualitativePreset ?? 'baseline';
+  const blueQuantitativePresetMeta = getBlueQuantitativePresetMeta(blueQuantitativePreset);
+  const blueQualitativePresetMeta = getBlueQualitativePresetMeta(blueQualitativePreset);
+  const redPresetMode = params.redPresetMode ?? 'preset';
+  const redQuantitativePreset = params.redQuantitativePreset ?? 'medium';
+  const redQualitativePreset = params.redQualitativePreset ?? 'baseline';
+  const redQuantitativePresetMeta = getRedQuantitativePresetMeta(redQuantitativePreset);
+  const redQualitativePresetMeta = getRedQualitativePresetMeta(redQualitativePreset);
   const costFramingLabel = s.costFramingLabel ?? COST_MODEL_UI.framingLabel;
   const costModelNotes = Array.isArray(s.costModelNotes) ? s.costModelNotes : [];
   const spaceBoostLayerCostB = s.spaceBoostLayerCost_B ?? 0;
@@ -391,22 +453,68 @@ export function renderResultsContent(params, result) {
         <div class="results-grid">
           <div class="results-input-group-label results-input-group-label--first">Defense Profile</div>
           <div class="result-item">
-            <span class="label">Blue defense preset:</span>
-            <span class="value">${blueDefensePresetMeta.label}</span>
+            <span class="label">Blue preset mode:</span>
+            <span class="value">${bluePresetMode === 'custom' ? 'Custom' : 'Preset'}</span>
           </div>
           <div class="result-item">
+            <span class="label">Blue quantitative preset:</span>
+            <span class="value">${blueQuantitativePresetMeta.label}</span>
+          </div>
+          <div class="result-item">
+            <span class="label">Blue qualitative preset:</span>
+            <span class="value">${blueQualitativePresetMeta.label}</span>
+          </div>
+          <div class="result-item result-item--stacked">
             <span class="label">Preset note:</span>
-            <span class="value">${blueDefensePreset === 'custom' ? 'All Blue sensing, interceptor-effectiveness, doctrine, and inventory assumptions were manually configured.' : 'Blue sensing and interceptor-effectiveness assumptions were preset-controlled, while interceptor inventories and doctrine remained user-adjustable.'}</span>
+            <span class="value">${bluePresetMode === 'custom' ? 'All Blue quantitative and qualitative assumptions were manually configured in custom mode.' : 'Blue values were resolved from the selected quantitative and qualitative preset rows.'}</span>
           </div>
 
           <div class="results-input-group-label">Attack Profile</div>
           <div class="result-item">
-            <span class="label">Red attack preset:</span>
-            <span class="value">${redAttackPresetMeta.label}</span>
+            <span class="label">Red preset mode:</span>
+            <span class="value">${redPresetMode === 'custom' ? 'Custom' : 'Preset'}</span>
           </div>
           <div class="result-item">
+            <span class="label">Red quantitative preset:</span>
+            <span class="value">${redQuantitativePresetMeta.label}</span>
+          </div>
+          <div class="result-item">
+            <span class="label">Red qualitative preset:</span>
+            <span class="value">${redQualitativePresetMeta.label}</span>
+          </div>
+          <div class="result-item result-item--stacked">
             <span class="label">Preset note:</span>
-            <span class="value">${redAttackPreset === 'custom' ? 'All Red strike, penetration-aid, and counterspace assumptions were manually configured.' : 'Qualitative Red assumptions were preset-controlled, with missile count left user-adjustable.'}</span>
+            <span class="value">${redPresetMode === 'custom' ? 'Red quantitative and qualitative assumptions were manually configured, while the actor-specific launch site remained fixed.' : 'Red values were resolved from the selected quantitative and qualitative preset rows, with launch site fixed by actor.'}</span>
+          </div>
+
+          <div class="results-input-group-label">Modeled Geometry</div>
+          <div class="result-item">
+            <span class="label">Representative launch site:</span>
+            <span class="value">${launchSiteLabel}</span>
+          </div>
+          <div class="result-item">
+            <span class="label">Launch-site coordinates:</span>
+            <span class="value">${launchSiteCoordinates}</span>
+          </div>
+          <div class="result-item">
+            <span class="label">SBI availability at launch site:</span>
+            <span class="value">${fmt(launchSiteSbiAvailabilityPercent, 2)}% of constellation</span>
+          </div>
+          <div class="result-item result-item--stacked">
+            <span class="label">Launch-site note:</span>
+            <span class="value">${launchSiteNote}</span>
+          </div>
+          <div class="result-item result-item--stacked">
+            <span class="label">Reference space-layer geometry:</span>
+            <span class="value">${spaceLayerGeometrySummary}</span>
+          </div>
+          <div class="result-item result-item--stacked">
+            <span class="label">Reference seed orbit:</span>
+            <span class="value">${referenceOrbitSummary}</span>
+          </div>
+          <div class="result-item result-item--stacked">
+            <span class="label">Availability method:</span>
+            <span class="value">${availabilitySummary}</span>
           </div>
 
           <div class="results-input-group-label">Strike Salvo</div>
@@ -423,10 +531,6 @@ export function renderResultsContent(params, result) {
             <span class="value">${fmt(kilotonsPerWarhead, 0)} kt</span>
           </div>
           <div class="result-item">
-            <span class="label">Launch region preset:</span>
-            <span class="value">${LAUNCH_REGION_PRESETS[launchRegion]?.label ?? launchRegion}</span>
-          </div>
-          <div class="result-item">
             <span class="label">Real warheads total:</span>
             <span class="value" style="color: var(--accent-red);">${realWarheads}</span>
           </div>
@@ -434,29 +538,9 @@ export function renderResultsContent(params, result) {
             <span class="label">Total objects:</span>
             <span class="value">${totalObjects}</span>
           </div>
-
-          <div class="results-input-group-label">Penetration Aids</div>
           <div class="result-item">
             <span class="label">Decoys per missile:</span>
             <span class="value">${decoysPerMissile.toFixed(1)}</span>
-          </div>
-          <div class="result-item">
-            <span class="label">Boost-phase survivability and evasion:</span>
-            <span class="value">${fmt(boostEvasionPenalty, 2)}</span>
-          </div>
-          <div class="result-item">
-            <span class="label">Midcourse discrimination and allocation penalty:</span>
-            <span class="value">${fmt(midcourseInterceptionPenalty, 2)}</span>
-          </div>
-
-          <div class="results-input-group-label">Counterspace Attack</div>
-          <div class="result-item">
-            <span class="label">Degradation of Blue’s sensing and tracking:</span>
-            <span class="value">${fmt(asatSensingPenalty, 2)}</span>
-          </div>
-          <div class="result-item">
-            <span class="label">Degradation of space-based boost interceptor availability:</span>
-            <span class="value">${fmt(asatAvailabilityPenalty, 2)}</span>
           </div>
 
           <div class="results-input-group-label">Sensors and Detection</div>
@@ -475,14 +559,6 @@ export function renderResultsContent(params, result) {
           <div class="result-item">
             <span class="label">Discrimination note:</span>
             <span class="value">These global Blue sensing/tracking/discrimination assumptions are upstream of interceptor engagement. Midcourse outcomes are especially sensitive to warhead/decoy discrimination quality.</span>
-          </div>
-          <div class="result-item">
-            <span class="label">Effective boost/midcourse detection (base × sensing penalty):</span>
-            <span class="value">${fmt(params.pDetectTrack * (1 - asatSensingPenalty), 2)}</span>
-          </div>
-          <div class="result-item">
-            <span class="label">Detection note:</span>
-            <span class="value">Counterspace sensing degradation is applied to both modeled engagement phases: boost and midcourse. Ground-based midcourse interceptors remain in the model.</span>
           </div>
 
           <div class="results-input-group-label">Ground-Based Midcourse Interceptors</div>
@@ -513,12 +589,8 @@ export function renderResultsContent(params, result) {
             <span class="value">${boostKineticShotsPerTarget}</span>
           </div>
           <div class="result-item">
-            <span class="label">Space-based interceptor availability (after ASAT degradation):</span>
-            <span class="value">${fmt(1 - asatAvailabilityPenalty, 2)}</span>
-          </div>
-          <div class="result-item">
             <span class="label">Space-layer note:</span>
-            <span class="value">The modeled space layer is limited to hypothetical boost-phase interceptors.</span>
+            <span class="value">The modeled space layer is limited to hypothetical boost-phase interceptors, with availability set by the actor-fixed launch site and the reference constellation geometry.</span>
           </div>
 
           <div class="results-input-group-label">Model Computation</div>

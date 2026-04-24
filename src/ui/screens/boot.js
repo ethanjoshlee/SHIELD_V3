@@ -1,5 +1,5 @@
 /**
- * S0 — Boot screen. Shows canvas icosahedron, then auto-transitions to SELECT.
+ * S0 — Boot screen. Shows canvas icosahedron, then auto-transitions to WIZARD.
  * Click anywhere to skip.
  */
 

@@ -1,12 +1,12 @@
 /**
  * Scenario-layer transforms for boost-phase assumptions.
  *
- * Keeps coverage math deterministic and continuous.
+ * Keeps boost availability math deterministic and continuous.
  * Discretization happens later at engagement resolution.
  */
 
 import { bernoulli, clamp01 } from '../utils/rng.js';
-import { LAUNCH_REGION_PRESETS } from '../config/launchRegions.js';
+import { SBI_CONSTELLATION_ASSUMPTIONS, resolveRedLaunchSite } from '../config/launchSites.js';
 
 function asFiniteNonNegative(value, fallback = 0) {
   const n = Number(value);
@@ -20,17 +20,15 @@ function asProbability(value, fallback = 0) {
   return clamp01(n);
 }
 
-function resolveLaunchRegion(launchRegion) {
-  if (LAUNCH_REGION_PRESETS[launchRegion]) return launchRegion;
-  return 'default';
+function resolveLaunchSite(params) {
+  return resolveRedLaunchSite(params.redKey, params.launchSiteKey);
 }
 
 /**
  * Build boost-phase scenario values from user params / presets.
  */
 export function buildBoostScenario(params) {
-  const launchRegion = resolveLaunchRegion(params.launchRegion);
-  const preset = LAUNCH_REGION_PRESETS[launchRegion];
+  const launchSite = resolveLaunchSite(params);
 
   const deployedByType = {
     boost_kinetic: asFiniteNonNegative(params.nSpaceBoostKinetic, 0),
@@ -40,36 +38,35 @@ export function buildBoostScenario(params) {
     boost_kinetic: asProbability(params.pkSpaceBoostKinetic, 0.5),
   };
 
-  // Outcome-based ASAT availability penalty (replaces mechanism-based cyber/h2k/nuclear model).
-  const asatAvailabilityPenalty = asProbability(params.asatAvailabilityPenalty, 0);
-  const availabilityMultiplier = clamp01(1 - asatAvailabilityPenalty);
-
-  const boostEvasionPenalty = asProbability(params.boostEvasionPenalty, 0);
-
   const coverageByType = {
-    boost_kinetic: asProbability(preset.coverage.spaceBoostKinetic, 1.0),
+    boost_kinetic: asProbability(
+      launchSite?.sbiAvailability?.coverageByType?.boost_kinetic,
+      0
+    ),
   };
 
   const effectiveBoostInterceptorsInRangeByType = {
     boost_kinetic: deployedByType.boost_kinetic * coverageByType.boost_kinetic,
   };
 
-  const effectiveBoostInterceptorsPostAsatByType = {
-    boost_kinetic:
-      effectiveBoostInterceptorsInRangeByType.boost_kinetic *
-      availabilityMultiplier,
+  const effectiveBoostInterceptorsAvailableByType = {
+    boost_kinetic: effectiveBoostInterceptorsInRangeByType.boost_kinetic,
   };
 
   return {
-    launchRegion,
-    launchRegionLabel: preset.label,
+    launchSiteKey: launchSite?.key ?? null,
+    launchSiteLabel: launchSite?.label ?? 'Unspecified launch site',
+    launchSiteCoordinates: launchSite?.coordinates ?? null,
+    launchSiteAvailabilityFraction:
+      launchSite?.sbiAvailability?.fractionOfConstellation ?? 0,
+    launchSiteAvailabilityPercent:
+      launchSite?.sbiAvailability?.percentOfConstellation ?? 0,
+    constellationAssumptions: SBI_CONSTELLATION_ASSUMPTIONS,
     deployedByType,
     pkByType,
     coverageByType,
-    availabilityMultiplier,
-    boostEvasionPenalty,
     effectiveBoostInterceptorsInRangeByType,
-    effectiveBoostInterceptorsPostAsatByType,
+    effectiveBoostInterceptorsAvailableByType,
   };
 }
 

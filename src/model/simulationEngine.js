@@ -8,7 +8,6 @@
 import { clamp01, bernoulli } from '../utils/rng.js';
 import { generateMissiles, expandToWarheadsAndDecoys } from './scenarioBuilder.js';
 import { classifyTarget, engageWithType } from './engagement.js';
-import { applyBoostEvasion } from './rules.js';
 import { buildBoostScenario, discretizeBoostInventoryByType } from './scenarioLayer.js';
 
 const BOOST_TYPES = ['boost_kinetic'];
@@ -61,7 +60,7 @@ function boostBarrageDoctrineParamsFrom(params) {
 
 function hasBoostEngagementCapacity(boostScenario) {
   return BOOST_TYPES.some((type) => {
-    const continuous = boostScenario.effectiveBoostInterceptorsPostAsatByType[type] ?? 0;
+    const continuous = boostScenario.effectiveBoostInterceptorsAvailableByType[type] ?? 0;
     const pk = boostScenario.pkByType[type] ?? 0;
     return continuous > 0 && pk > 0;
   });
@@ -73,7 +72,6 @@ function runBoostPhaseOnMissiles({
   boostKineticDoctrineParams,
   boostKineticInventory,
   pkBoostKinetic,
-  boostEvasionPenalty,
 }) {
   let kineticInventory = boostKineticInventory;
   const survivingMissiles = [];
@@ -94,8 +92,7 @@ function runBoostPhaseOnMissiles({
     let killed = false;
 
     if (kineticInventory > 0 && pkBoostKinetic > 0) {
-      const pk = applyBoostEvasion(pkBoostKinetic, boostEvasionPenalty);
-      const res = engageWithType(missile, pk, boostKineticDoctrineParams, kineticInventory);
+      const res = engageWithType(missile, pkBoostKinetic, boostKineticDoctrineParams, kineticInventory);
       kineticInventory = res.inventoryRemaining;
       boostShotsFired += res.shotsFired;
 
@@ -123,9 +120,7 @@ function runBoostPhaseOnMissiles({
 }
 
 export function runOneTrial(params) {
-  const asatSensingPenalty = params.asatSensingPenalty ?? 0;
-  const midcourseInterceptionPenalty = params.midcourseInterceptionPenalty ?? 0;
-  const pDetectTrack = clamp01(params.pDetectTrack * (1 - asatSensingPenalty));
+  const pDetectTrack = clamp01(params.pDetectTrack);
   const boostScenario = buildBoostScenario(params);
   const midcourseKineticDoctrine = midcourseKineticDoctrineParamsFrom(params);
   const boostKineticDoctrine = boostBarrageDoctrineParamsFrom(params);
@@ -143,7 +138,7 @@ export function runOneTrial(params) {
 
   if (hasBoostEngagementCapacity(boostScenario)) {
     const boostInventoryDiscrete = discretizeBoostInventoryByType(
-      boostScenario.effectiveBoostInterceptorsPostAsatByType
+      boostScenario.effectiveBoostInterceptorsAvailableByType
     );
     const boostKineticInventory = boostInventoryDiscrete.boost_kinetic ?? 0;
     const boostPkKinetic = clamp01(boostScenario.pkByType.boost_kinetic);
@@ -154,14 +149,11 @@ export function runOneTrial(params) {
       boostKineticDoctrineParams: boostKineticDoctrine,
       boostKineticInventory,
       pkBoostKinetic: boostPkKinetic,
-      boostEvasionPenalty: boostScenario.boostEvasionPenalty,
     });
   }
 
   const { targets: midcourseTargets } = expandToWarheadsAndDecoys(boostRes.survivingMissiles);
-  const effectivePClassifyWarhead = clamp01(
-    params.pClassifyWarhead * (1 - midcourseInterceptionPenalty)
-  );
+  const effectivePClassifyWarhead = clamp01(params.pClassifyWarhead);
   const pkUnified = clamp01(params.pkWarhead);
 
   let inventory = Math.max(0, Math.floor(Number(params.nInventory) || 0));

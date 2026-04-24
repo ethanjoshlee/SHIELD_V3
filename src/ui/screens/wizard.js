@@ -11,19 +11,19 @@
 import { STATES } from '../stateMachine.js';
 import { COUNTRIES } from '../../config/countries.js';
 import { DEFAULTS } from '../../state.js';
-import { LAUNCH_REGION_PRESETS } from '../../config/launchRegions.js';
+import { getRedLaunchSite } from '../../config/launchSites.js';
 import {
-  BLUE_DEFENSE_CONTROLLED_FIELDS,
   BLUE_DEFENSE_PRESET_FIELDS,
-  BLUE_DEFENSE_ALWAYS_EDITABLE_FIELDS,
-  DEFAULT_BLUE_DEFENSE_PRESET,
-  getBlueDefensePresetMeta,
+  DEFAULT_BLUE_QUANTITATIVE_PRESET,
+  DEFAULT_BLUE_QUALITATIVE_PRESET,
+  getBlueDefenseProfileMeta,
   resolveBlueDefenseProfile,
 } from '../../config/blueDefensePresets.js';
 import {
-  DEFAULT_RED_ATTACK_PRESET,
+  DEFAULT_RED_QUANTITATIVE_PRESET,
+  DEFAULT_RED_QUALITATIVE_PRESET,
   RED_ATTACK_PRESET_FIELDS,
-  getRedAttackPresetMeta,
+  getRedAttackProfileMeta,
   resolveRedAttackProfile,
 } from '../../config/redAttackPresets.js';
 import { initGlobe, startAnimation, setupInteraction, getGlobeGroup, getScene, rotateToCountry } from '../globe/globeCore.js';
@@ -33,8 +33,8 @@ import { blueParamsHTML, redParamsHTML, simParamsHTML, readParamsFromUI } from '
 
 const STEPS = [
   { key: 'sides', title: '', subtitle: '', number: '01 / 04' },
-  { key: 'blue', title: 'CONFIGURE BLUE', subtitle: 'Defense presets and assumptions', number: '02 / 04' },
-  { key: 'red',  title: 'CONFIGURE RED', subtitle: 'Attack presets and assumptions', number: '03 / 04' },
+  { key: 'blue', title: 'CONFIGURE BLUE', subtitle: 'Quantitative and qualitative defense assumptions', number: '02 / 04' },
+  { key: 'red',  title: 'CONFIGURE RED', subtitle: 'Quantitative and qualitative attack assumptions', number: '03 / 04' },
   { key: 'sim',  title: 'MODEL COMPUTATION', subtitle: 'Trial settings and model parameters', number: '04 / 04' },
 ];
 
@@ -50,8 +50,24 @@ const DOCTRINE_GROUPS = [
 function formatBlueSummaryValue(param, rawValue) {
   if (rawValue == null || rawValue === '') return '-';
 
+  if (param === 'midcourseKineticDoctrineMode') {
+    if (rawValue === 'sls') return 'Shoot-Look-Shoot';
+    if (rawValue === 'barrage') return 'Barrage';
+    return String(rawValue);
+  }
+
   const value = Number(rawValue);
   if (!Number.isFinite(value)) return String(rawValue);
+
+  if (
+    param === 'nInventory' ||
+    param === 'nSpaceBoostKinetic' ||
+    param === 'midcourseKineticShotsPerTarget' ||
+    param === 'midcourseKineticMaxShotsPerTarget' ||
+    param === 'boostKineticShotsPerTarget'
+  ) {
+    return Number.isInteger(value) ? value.toLocaleString('en-US') : value.toFixed(1);
+  }
 
   return `${(value * 100).toFixed(1)}%`;
 }
@@ -59,24 +75,81 @@ function formatBlueSummaryValue(param, rawValue) {
 function formatRedSummaryValue(param, rawValue) {
   if (rawValue == null || rawValue === '') return '-';
 
-  if (param === 'launchRegion') {
-    return LAUNCH_REGION_PRESETS[rawValue]?.label ?? rawValue;
+  if (param === 'launchSiteKey') {
+    return getRedLaunchSite(rawValue)?.label ?? rawValue;
   }
 
   const value = Number(rawValue);
   if (!Number.isFinite(value)) return String(rawValue);
 
   if (param === 'kilotonsPerWarhead') return `${Math.round(value)} kt`;
-  if (
-    param === 'boostEvasionPenalty' ||
-    param === 'midcourseInterceptionPenalty' ||
-    param === 'asatSensingPenalty' ||
-    param === 'asatAvailabilityPenalty'
-  ) {
-    return `${(value * 100).toFixed(1)}%`;
+
+  return Number.isInteger(value) ? value.toLocaleString('en-US') : value.toFixed(1);
+}
+
+const BLUE_SELECTION_TOOLTIP_TEXT = Object.freeze({
+  US: 'Placeholder: Blue-side U.S. defense geography, basing assumptions, and engagement-geometry notes will live here in a later pass.',
+  Europe:
+    'Placeholder: Blue-side European defense geography, basing assumptions, and engagement-geometry notes will live here in a later pass.',
+});
+
+function escapeHTML(value) {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+function formatCoordinate(value, positiveHemisphere, negativeHemisphere) {
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue)) return '-';
+
+  const hemisphere = numericValue >= 0 ? positiveHemisphere : negativeHemisphere;
+  return `${Math.abs(numericValue).toFixed(2)} deg ${hemisphere}`;
+}
+
+function buildSelectionTooltipText(side, countryKey) {
+  if (side === 'blue') {
+    return BLUE_SELECTION_TOOLTIP_TEXT[countryKey] ?? 'Placeholder: Blue-side modeled-geometry notes will be added here in a later pass.';
   }
 
-  return Number.isInteger(value) ? String(value) : value.toFixed(1);
+  const profile = resolveRedAttackProfile(countryKey);
+  const launchSite = getRedLaunchSite(profile.launchSiteKey);
+  if (!launchSite) {
+    return 'Representative modeled launch site is fixed by actor selection and used in the boost-phase space-interceptor availability calculation.';
+  }
+
+  const latText = formatCoordinate(launchSite.coordinates?.latDeg, 'N', 'S');
+  const lngText = formatCoordinate(launchSite.coordinates?.lngDeg, 'E', 'W');
+  const availabilityPct = launchSite.sbiAvailability?.percentOfConstellation ?? 0;
+
+  return [
+    `Modeled launch site: ${launchSite.label}`,
+    `Coordinates: ${latText}, ${lngText}`,
+    `${launchSite.notes}`,
+    `Modeled boost-phase SBI availability: ${availabilityPct.toFixed(2)}% of constellation.`,
+  ].join('\n');
+}
+
+function selectionTooltipHTML(side, countryKey) {
+  const tone = side === 'blue' ? 'blue' : 'red';
+  const placement = side === 'blue' ? 'start' : 'end';
+  const safeTooltip = escapeHTML(buildSelectionTooltipText(side, countryKey));
+
+  return `
+    <span
+      class="wizard-inline-tooltip wizard-country-tooltip wizard-inline-tooltip--${tone}"
+      data-tooltip-placement="${placement}"
+      tabindex="0"
+      role="note"
+      aria-label="${safeTooltip}"
+    >
+      <span class="wizard-inline-tooltip-trigger" aria-hidden="true">?</span>
+      <span class="wizard-inline-tooltip-bubble wizard-inline-tooltip-bubble--${placement}">${safeTooltip}</span>
+    </span>
+  `;
 }
 
 function setInlineTooltipBubblePlacement(bubble, horizontal, vertical) {
@@ -110,10 +183,15 @@ function positionInlineTooltip(tooltipEl) {
   const bubble = tooltipEl?.querySelector('.wizard-inline-tooltip-bubble');
   if (!bubble) return;
 
-  const boundary =
-    tooltipEl.closest('.wizard-params-container') ??
-    tooltipEl.closest('.wizard-left') ??
-    document.documentElement;
+  const isSidesSelectionTooltip = !!tooltipEl.closest('.wizard-country-section-sides');
+  const boundary = isSidesSelectionTooltip
+    ? tooltipEl.closest('.wizard-shell') ??
+      tooltipEl.closest('.wizard-right') ??
+      document.documentElement
+    : tooltipEl.closest('.wizard-params-container') ??
+      tooltipEl.closest('.wizard-left') ??
+      tooltipEl.closest('.wizard-shell') ??
+      document.documentElement;
   const boundaryRect = boundary.getBoundingClientRect();
   const padding = 12;
   const defaultHorizontal = tooltipEl.dataset.tooltipPlacement === 'end' ? 'end' : 'start';
@@ -165,12 +243,28 @@ export function renderWizard(container, transitionFn) {
     return el?.querySelector(`[data-param="${param}"]`);
   }
 
-  function currentBlueDefensePreset() {
-    return getParamInput('blueDefensePreset')?.value ?? DEFAULT_BLUE_DEFENSE_PRESET;
+  function currentBluePresetMode() {
+    return getParamInput('bluePresetMode')?.value ?? 'preset';
   }
 
-  function currentRedAttackPreset() {
-    return getParamInput('redAttackPreset')?.value ?? DEFAULT_RED_ATTACK_PRESET;
+  function currentBlueQuantitativePreset() {
+    return getParamInput('blueQuantitativePreset')?.value ?? DEFAULT_BLUE_QUANTITATIVE_PRESET;
+  }
+
+  function currentBlueQualitativePreset() {
+    return getParamInput('blueQualitativePreset')?.value ?? DEFAULT_BLUE_QUALITATIVE_PRESET;
+  }
+
+  function currentRedPresetMode() {
+    return getParamInput('redPresetMode')?.value ?? 'preset';
+  }
+
+  function currentRedQuantitativePreset() {
+    return getParamInput('redQuantitativePreset')?.value ?? DEFAULT_RED_QUANTITATIVE_PRESET;
+  }
+
+  function currentRedQualitativePreset() {
+    return getParamInput('redQualitativePreset')?.value ?? DEFAULT_RED_QUALITATIVE_PRESET;
   }
 
   function snapshotCurrentBlueDraft() {
@@ -184,18 +278,6 @@ export function renderWizard(container, transitionFn) {
   function saveCurrentBlueCustomDraft() {
     if (!selectedBlue) return;
     blueCustomDrafts[selectedBlue] = snapshotCurrentBlueDraft();
-  }
-
-  function activateRedTab(tabId) {
-    const redRoot = el?.querySelector('[data-red-attack-root]');
-    if (!redRoot) return;
-
-    redRoot.querySelectorAll('.red-custom-tabs .wizard-tab').forEach((tab) => {
-      tab.classList.toggle('active', tab.dataset.tab === tabId);
-    });
-    redRoot.querySelectorAll('.wizard-tab-panel').forEach((panel) => {
-      panel.classList.toggle('active', panel.dataset.tabPanel === tabId);
-    });
   }
 
   function activateBlueTab(tabId) {
@@ -239,7 +321,12 @@ export function renderWizard(container, transitionFn) {
     const items = sortedCountries.map(([key, cdata]) => {
       const isSelected = key === selected;
       const selectedClass = isSelected ? `selected ${side}` : '';
-      return `<div class="wizard-country-item ${selectedClass}" data-side="${side}" data-key="${key}">${cdata.label}</div>`;
+      return `
+        <div class="wizard-country-item ${selectedClass}" data-side="${side}" data-key="${key}">
+          <span class="wizard-country-item-label">${cdata.label}</span>
+          ${selectionTooltipHTML(side, key)}
+        </div>
+      `;
     });
     return items.join('');
   }
@@ -342,25 +429,38 @@ export function renderWizard(container, transitionFn) {
     const blueRoot = el?.querySelector('[data-blue-defense-root]');
     if (!blueRoot) return;
 
-    const presetKey = currentBlueDefensePreset();
-    const isCustom = presetKey === 'custom';
+    const mode = currentBluePresetMode();
+    const isCustom = mode === 'custom';
     const previousMode = blueRoot.dataset.blueDefenseMode;
-    const activeTabId = blueRoot.querySelector('.blue-custom-tabs .wizard-tab.active')?.dataset.tab;
-    blueRoot.dataset.blueDefenseMode = isCustom ? 'custom' : 'preset';
+    blueRoot.dataset.blueDefenseMode = mode;
 
     if (isCustom && previousMode !== 'custom') {
       activateBlueTab('blue-sensing');
-    } else if (!isCustom && activeTabId !== 'blue-gbi' && activeTabId !== 'blue-space') {
-      activateBlueTab('blue-space');
     }
 
-    blueRoot.querySelectorAll('[data-blue-defense-preset]').forEach((btn) => {
-      const selected = btn.dataset.blueDefensePreset === presetKey;
+    blueRoot.querySelectorAll('[data-blue-quantitative-preset]').forEach((btn) => {
+      const selected = !isCustom && btn.dataset.blueQuantitativePreset === currentBlueQuantitativePreset();
       btn.classList.toggle('selected', selected);
       btn.setAttribute('aria-pressed', selected ? 'true' : 'false');
     });
 
-    const meta = getBlueDefensePresetMeta(presetKey);
+    blueRoot.querySelectorAll('[data-blue-qualitative-preset]').forEach((btn) => {
+      const selected = !isCustom && btn.dataset.blueQualitativePreset === currentBlueQualitativePreset();
+      btn.classList.toggle('selected', selected);
+      btn.setAttribute('aria-pressed', selected ? 'true' : 'false');
+    });
+
+    const customBtn = blueRoot.querySelector('[data-blue-preset-mode="custom"]');
+    if (customBtn) {
+      customBtn.classList.toggle('selected', isCustom);
+      customBtn.setAttribute('aria-pressed', isCustom ? 'true' : 'false');
+    }
+
+    const meta = getBlueDefenseProfileMeta(
+      currentBlueQuantitativePreset(),
+      currentBlueQualitativePreset(),
+      mode
+    );
     const titleEl = blueRoot.querySelector('[data-blue-preset-title]');
     const descriptionEl = blueRoot.querySelector('[data-blue-preset-description]');
     if (titleEl) titleEl.textContent = meta.title;
@@ -372,38 +472,35 @@ export function renderWizard(container, transitionFn) {
     });
   }
 
-  function applyResolvedBlueDefenseProfile(presetKey, { preserveEditable = true } = {}) {
+  function applyResolvedBlueDefenseProfile({
+    quantitativePresetKey = currentBlueQuantitativePreset(),
+    qualitativePresetKey = currentBlueQualitativePreset(),
+  } = {}) {
     if (!selectedBlue) return;
 
-    const overrides = {};
-    if (preserveEditable) {
-      for (const param of BLUE_DEFENSE_ALWAYS_EDITABLE_FIELDS) {
-        const currentValue = getParamInput(param)?.value;
-        if (currentValue == null || currentValue === '') continue;
-        overrides[param] = currentValue;
-      }
-    }
-
-    const profile = resolveBlueDefenseProfile(selectedBlue, presetKey, overrides);
+    const profile = resolveBlueDefenseProfile(selectedBlue, {
+      quantitativePresetKey,
+      qualitativePresetKey,
+    });
     for (const param of BLUE_DEFENSE_PRESET_FIELDS) {
       if (profile[param] === undefined || profile[param] === null) continue;
       setParamValue(param, profile[param]);
     }
   }
 
-  function setBlueDefensePreset(presetKey, { preserveEditable = true, saveDraft = true } = {}) {
-    const presetInput = getParamInput('blueDefensePreset');
-    if (!presetInput) return;
+  function setBluePresetMode(mode, { saveDraft = true } = {}) {
+    const modeInput = getParamInput('bluePresetMode');
+    if (!modeInput) return;
 
-    const previousPreset = currentBlueDefensePreset();
-    if (saveDraft && previousPreset === 'custom' && presetKey !== 'custom') {
+    const previousMode = currentBluePresetMode();
+    if (saveDraft && previousMode === 'custom' && mode !== 'custom') {
       saveCurrentBlueCustomDraft();
     }
 
-    presetInput.value = presetKey;
-    presetInput.dispatchEvent(new Event('change', { bubbles: true }));
+    modeInput.value = mode;
+    modeInput.dispatchEvent(new Event('change', { bubbles: true }));
 
-    if (presetKey === 'custom') {
+    if (mode === 'custom') {
       const draft = selectedBlue ? blueCustomDrafts[selectedBlue] : null;
       if (draft) {
         for (const param of BLUE_DEFENSE_PRESET_FIELDS) {
@@ -412,9 +509,41 @@ export function renderWizard(container, transitionFn) {
         }
       }
     } else {
-      applyResolvedBlueDefenseProfile(presetKey, { preserveEditable });
+      applyResolvedBlueDefenseProfile();
     }
 
+    updateBlueDefensePresetUI();
+  }
+
+  function setBlueQuantitativePreset(presetKey) {
+    const presetInput = getParamInput('blueQuantitativePreset');
+    if (!presetInput) return;
+
+    presetInput.value = presetKey;
+    presetInput.dispatchEvent(new Event('change', { bubbles: true }));
+
+    if (currentBluePresetMode() === 'custom') {
+      setBluePresetMode('preset');
+      return;
+    }
+
+    applyResolvedBlueDefenseProfile({ quantitativePresetKey: presetKey });
+    updateBlueDefensePresetUI();
+  }
+
+  function setBlueQualitativePreset(presetKey) {
+    const presetInput = getParamInput('blueQualitativePreset');
+    if (!presetInput) return;
+
+    presetInput.value = presetKey;
+    presetInput.dispatchEvent(new Event('change', { bubbles: true }));
+
+    if (currentBluePresetMode() === 'custom') {
+      setBluePresetMode('preset');
+      return;
+    }
+
+    applyResolvedBlueDefenseProfile({ qualitativePresetKey: presetKey });
     updateBlueDefensePresetUI();
   }
 
@@ -422,17 +551,33 @@ export function renderWizard(container, transitionFn) {
     const redRoot = el?.querySelector('[data-red-attack-root]');
     if (!redRoot) return;
 
-    const presetKey = currentRedAttackPreset();
-    const isCustom = presetKey === 'custom';
-    redRoot.dataset.redAttackMode = isCustom ? 'custom' : 'preset';
+    const mode = currentRedPresetMode();
+    const isCustom = mode === 'custom';
+    redRoot.dataset.redAttackMode = mode;
 
-    redRoot.querySelectorAll('[data-red-attack-preset]').forEach((btn) => {
-      const selected = btn.dataset.redAttackPreset === presetKey;
+    redRoot.querySelectorAll('[data-red-quantitative-preset]').forEach((btn) => {
+      const selected = !isCustom && btn.dataset.redQuantitativePreset === currentRedQuantitativePreset();
       btn.classList.toggle('selected', selected);
       btn.setAttribute('aria-pressed', selected ? 'true' : 'false');
     });
 
-    const meta = getRedAttackPresetMeta(presetKey);
+    redRoot.querySelectorAll('[data-red-qualitative-preset]').forEach((btn) => {
+      const selected = !isCustom && btn.dataset.redQualitativePreset === currentRedQualitativePreset();
+      btn.classList.toggle('selected', selected);
+      btn.setAttribute('aria-pressed', selected ? 'true' : 'false');
+    });
+
+    const customBtn = redRoot.querySelector('[data-red-preset-mode="custom"]');
+    if (customBtn) {
+      customBtn.classList.toggle('selected', isCustom);
+      customBtn.setAttribute('aria-pressed', isCustom ? 'true' : 'false');
+    }
+
+    const meta = getRedAttackProfileMeta(
+      currentRedQuantitativePreset(),
+      currentRedQualitativePreset(),
+      mode
+    );
     const titleEl = redRoot.querySelector('[data-red-preset-title]');
     const descriptionEl = redRoot.querySelector('[data-red-preset-description]');
     if (titleEl) titleEl.textContent = meta.title;
@@ -442,19 +587,18 @@ export function renderWizard(container, transitionFn) {
       const param = node.dataset.redSummaryValue;
       node.textContent = formatRedSummaryValue(param, getParamInput(param)?.value);
     });
-
-    if (!isCustom) activateRedTab('red-strike');
   }
 
-  function applyResolvedRedAttackProfile(presetKey, { preserveMissiles = true } = {}) {
+  function applyResolvedRedAttackProfile({
+    quantitativePresetKey = currentRedQuantitativePreset(),
+    qualitativePresetKey = currentRedQualitativePreset(),
+  } = {}) {
     if (!selectedRed) return;
 
-    const currentMissiles = preserveMissiles ? getParamInput('nMissiles')?.value : null;
-    const overrides =
-      preserveMissiles && currentMissiles != null && currentMissiles !== ''
-        ? { nMissiles: Number(currentMissiles) }
-        : {};
-    const profile = resolveRedAttackProfile(selectedRed, presetKey, overrides);
+    const profile = resolveRedAttackProfile(selectedRed, {
+      quantitativePresetKey,
+      qualitativePresetKey,
+    });
 
     for (const param of RED_ATTACK_PRESET_FIELDS) {
       if (profile[param] === undefined || profile[param] === null) continue;
@@ -462,19 +606,19 @@ export function renderWizard(container, transitionFn) {
     }
   }
 
-  function setRedAttackPreset(presetKey, { preserveMissiles = true, saveDraft = true } = {}) {
-    const presetInput = getParamInput('redAttackPreset');
-    if (!presetInput) return;
+  function setRedPresetMode(mode, { saveDraft = true } = {}) {
+    const modeInput = getParamInput('redPresetMode');
+    if (!modeInput) return;
 
-    const previousPreset = currentRedAttackPreset();
-    if (saveDraft && previousPreset === 'custom' && presetKey !== 'custom') {
+    const previousMode = currentRedPresetMode();
+    if (saveDraft && previousMode === 'custom' && mode !== 'custom') {
       saveCurrentRedCustomDraft();
     }
 
-    presetInput.value = presetKey;
-    presetInput.dispatchEvent(new Event('change', { bubbles: true }));
+    modeInput.value = mode;
+    modeInput.dispatchEvent(new Event('change', { bubbles: true }));
 
-    if (presetKey === 'custom') {
+    if (mode === 'custom') {
       const draft = selectedRed ? redCustomDrafts[selectedRed] : null;
       if (draft) {
         for (const param of RED_ATTACK_PRESET_FIELDS) {
@@ -482,17 +626,49 @@ export function renderWizard(container, transitionFn) {
           setParamValue(param, draft[param]);
         }
       }
-      activateRedTab('red-strike');
     } else {
-      applyResolvedRedAttackProfile(presetKey, { preserveMissiles });
+      applyResolvedRedAttackProfile();
     }
 
+    updateRedAttackPresetUI();
+  }
+
+  function setRedQuantitativePreset(presetKey) {
+    const presetInput = getParamInput('redQuantitativePreset');
+    if (!presetInput) return;
+
+    presetInput.value = presetKey;
+    presetInput.dispatchEvent(new Event('change', { bubbles: true }));
+
+    if (currentRedPresetMode() === 'custom') {
+      setRedPresetMode('preset');
+      return;
+    }
+
+    applyResolvedRedAttackProfile({ quantitativePresetKey: presetKey });
+    updateRedAttackPresetUI();
+  }
+
+  function setRedQualitativePreset(presetKey) {
+    const presetInput = getParamInput('redQualitativePreset');
+    if (!presetInput) return;
+
+    presetInput.value = presetKey;
+    presetInput.dispatchEvent(new Event('change', { bubbles: true }));
+
+    if (currentRedPresetMode() === 'custom') {
+      setRedPresetMode('preset');
+      return;
+    }
+
+    applyResolvedRedAttackProfile({ qualitativePresetKey: presetKey });
     updateRedAttackPresetUI();
   }
 
   function handleCountryClick(e) {
     const item = e.target.closest('.wizard-country-item');
     if (!item) return;
+    if (e.target.closest('.wizard-inline-tooltip')) return;
 
     const side = item.dataset.side;
     const key  = item.dataset.key;
@@ -504,23 +680,29 @@ export function renderWizard(container, transitionFn) {
     item.classList.add('selected', side);
 
     if (side === 'blue') {
-      if (selectedBlue && selectedBlue !== key && currentBlueDefensePreset() === 'custom') {
+      if (selectedBlue && selectedBlue !== key && currentBluePresetMode() === 'custom') {
         saveCurrentBlueCustomDraft();
       }
       selectedBlue = key;
-      setBlueDefensePreset(DEFAULT_BLUE_DEFENSE_PRESET, {
-        preserveEditable: false,
-        saveDraft: false,
-      });
+      const quantitativeInput = getParamInput('blueQuantitativePreset');
+      const qualitativeInput = getParamInput('blueQualitativePreset');
+      if (quantitativeInput) quantitativeInput.value = DEFAULT_BLUE_QUANTITATIVE_PRESET;
+      if (qualitativeInput) qualitativeInput.value = DEFAULT_BLUE_QUALITATIVE_PRESET;
+      quantitativeInput?.dispatchEvent(new Event('change', { bubbles: true }));
+      qualitativeInput?.dispatchEvent(new Event('change', { bubbles: true }));
+      setBluePresetMode('preset', { saveDraft: false });
     } else {
-      if (selectedRed && selectedRed !== key && currentRedAttackPreset() === 'custom') {
+      if (selectedRed && selectedRed !== key && currentRedPresetMode() === 'custom') {
         saveCurrentRedCustomDraft();
       }
       selectedRed = key;
-      setRedAttackPreset(DEFAULT_RED_ATTACK_PRESET, {
-        preserveMissiles: false,
-        saveDraft: false,
-      });
+      const quantitativeInput = getParamInput('redQuantitativePreset');
+      const qualitativeInput = getParamInput('redQualitativePreset');
+      if (quantitativeInput) quantitativeInput.value = DEFAULT_RED_QUANTITATIVE_PRESET;
+      if (qualitativeInput) qualitativeInput.value = DEFAULT_RED_QUALITATIVE_PRESET;
+      quantitativeInput?.dispatchEvent(new Event('change', { bubbles: true }));
+      qualitativeInput?.dispatchEvent(new Event('change', { bubbles: true }));
+      setRedPresetMode('preset', { saveDraft: false });
     }
 
     const center = getCountryCenter(key);
@@ -725,24 +907,43 @@ export function renderWizard(container, transitionFn) {
     doctrineModeInput.dispatchEvent(new Event('change', { bubbles: true }));
   });
 
-  const bluePresetInput = getParamInput('blueDefensePreset');
-  bluePresetInput?.addEventListener('change', updateBlueDefensePresetUI);
-  for (const param of BLUE_DEFENSE_CONTROLLED_FIELDS) {
+  getParamInput('bluePresetMode')?.addEventListener('change', updateBlueDefensePresetUI);
+  getParamInput('blueQuantitativePreset')?.addEventListener('change', updateBlueDefensePresetUI);
+  getParamInput('blueQualitativePreset')?.addEventListener('change', updateBlueDefensePresetUI);
+  for (const param of BLUE_DEFENSE_PRESET_FIELDS) {
     const input = getParamInput(param);
     input?.addEventListener('input', updateBlueDefensePresetUI);
     input?.addEventListener('change', updateBlueDefensePresetUI);
   }
 
   el.addEventListener('click', (event) => {
-    const btn = event.target.closest('[data-blue-defense-preset]');
+    const quantitativeBtn = event.target.closest('[data-blue-quantitative-preset]');
+    if (quantitativeBtn && el.contains(quantitativeBtn)) {
+      const presetKey = quantitativeBtn.dataset.blueQuantitativePreset;
+      if (presetKey && presetKey !== currentBlueQuantitativePreset()) {
+        setBlueQuantitativePreset(presetKey);
+      }
+      return;
+    }
+
+    const qualitativeBtn = event.target.closest('[data-blue-qualitative-preset]');
+    if (qualitativeBtn && el.contains(qualitativeBtn)) {
+      const presetKey = qualitativeBtn.dataset.blueQualitativePreset;
+      if (presetKey && presetKey !== currentBlueQualitativePreset()) {
+        setBlueQualitativePreset(presetKey);
+      }
+      return;
+    }
+
+    const btn = event.target.closest('[data-blue-preset-mode="custom"]');
     if (!btn || !el.contains(btn)) return;
-    const presetKey = btn.dataset.blueDefensePreset;
-    if (!presetKey || presetKey === currentBlueDefensePreset()) return;
-    setBlueDefensePreset(presetKey, { preserveEditable: true });
+    if (currentBluePresetMode() === 'custom') return;
+    setBluePresetMode('custom');
   });
 
-  const redPresetInput = getParamInput('redAttackPreset');
-  redPresetInput?.addEventListener('change', updateRedAttackPresetUI);
+  getParamInput('redPresetMode')?.addEventListener('change', updateRedAttackPresetUI);
+  getParamInput('redQuantitativePreset')?.addEventListener('change', updateRedAttackPresetUI);
+  getParamInput('redQualitativePreset')?.addEventListener('change', updateRedAttackPresetUI);
   for (const param of RED_ATTACK_PRESET_FIELDS) {
     const input = getParamInput(param);
     input?.addEventListener('input', updateRedAttackPresetUI);
@@ -750,11 +951,28 @@ export function renderWizard(container, transitionFn) {
   }
 
   el.addEventListener('click', (event) => {
-    const btn = event.target.closest('[data-red-attack-preset]');
+    const quantitativeBtn = event.target.closest('[data-red-quantitative-preset]');
+    if (quantitativeBtn && el.contains(quantitativeBtn)) {
+      const presetKey = quantitativeBtn.dataset.redQuantitativePreset;
+      if (presetKey && presetKey !== currentRedQuantitativePreset()) {
+        setRedQuantitativePreset(presetKey);
+      }
+      return;
+    }
+
+    const qualitativeBtn = event.target.closest('[data-red-qualitative-preset]');
+    if (qualitativeBtn && el.contains(qualitativeBtn)) {
+      const presetKey = qualitativeBtn.dataset.redQualitativePreset;
+      if (presetKey && presetKey !== currentRedQualitativePreset()) {
+        setRedQualitativePreset(presetKey);
+      }
+      return;
+    }
+
+    const btn = event.target.closest('[data-red-preset-mode="custom"]');
     if (!btn || !el.contains(btn)) return;
-    const presetKey = btn.dataset.redAttackPreset;
-    if (!presetKey || presetKey === currentRedAttackPreset()) return;
-    setRedAttackPreset(presetKey, { preserveMissiles: true });
+    if (currentRedPresetMode() === 'custom') return;
+    setRedPresetMode('custom');
   });
 
   // Internal tab switching (within Blue / Red steps)
@@ -804,8 +1022,6 @@ export function renderWizard(container, transitionFn) {
   btnRun.addEventListener('click', () => {
     const params = readParamsFromUI(selectedBlue, selectedRed, el);
     transitionFn(STATES.LOADING, {
-      action: 'run',
-      fromWizard: true,
       blueKey: selectedBlue,
       redKey: selectedRed,
       params,
